@@ -60,12 +60,6 @@ func GetSugaredLoggerWithoutConfig() (*zap.SugaredLogger, error) {
 	return sugar, nil
 }
 
-// GetSugardLoggerForTest returns a generic zap sugared logger without configuration that should be used during testing.
-// Namely, this initializes the logger to maximize logging output.
-func GetSugaredLoggerForTest() *zap.SugaredLogger {
-	return GetSugaredLogger(nil)
-}
-
 // GetLogger returns the zap logger object. This can be used to customize the logger object.
 func GetLogger(c *Config) *zap.Logger {
 	zapC := GetZapConfig(c)
@@ -76,4 +70,19 @@ func GetLogger(c *Config) *zap.Logger {
 // GetSugaredLogger returns the zap sugared logger which can be used to emit log messages from the app.
 func GetSugaredLogger(c *Config) *zap.SugaredLogger {
 	return GetLogger(c).Sugar()
+}
+
+// GetSugardLoggerForTest returns a generic zap sugared logger without configuration that should be used during testing.
+// Namely, this initializes the logger to maximize logging output.
+func GetSugaredLoggerForTest() *zap.SugaredLogger {
+	debugLvl, err := zap.ParseAtomicLevel("debug")
+	if err != nil {
+		panic(err)
+	}
+
+	return GetSugaredLogger(&Config{
+		Level:          debugLvl,
+		Encoding:       "console",
+		WithStackTrace: true,
+	})
 }
