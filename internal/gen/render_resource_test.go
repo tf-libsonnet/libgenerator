@@ -22,7 +22,7 @@ func TestRenderResource(t *testing.T) {
 	schema := loadSchema(g, tfcoremockSchemaF)
 	simpleResource := schema.ResourceSchemas["tfcoremock_simple_resource"]
 
-	jt, err := RenderResource("simple_resource", simpleResource.Block)
+	jt, err := RenderResource("tfcoremock_simple_resource", simpleResource.Block)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	out, err := formatter.Format("", jt.String(), formatter.DefaultOptions())

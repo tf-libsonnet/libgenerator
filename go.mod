@@ -9,6 +9,7 @@ require (
 	github.com/hashicorp/terraform-exec v0.17.3
 	github.com/hashicorp/terraform-json v0.14.0
 	github.com/hashicorp/terraform-registry-address v0.1.0
+	github.com/iancoleman/strcase v0.2.0
 	github.com/jsonnet-libs/k8s v0.0.0-20221208111239-5065a9c04841
 	github.com/onsi/gomega v1.24.1
 	github.com/spf13/cobra v1.6.1
