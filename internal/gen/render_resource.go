@@ -13,7 +13,7 @@ const (
 )
 
 // RenderResource will render the libsonnet code for constructing a resource definition for the given Terraform resource
-// block. The generated libsonnet code follows the following canonical pattern:
+// block. The generated libsonnet code has the following canonical pattern:
 //
 //   - `newAttrs`: A function to construct an object that can be passed in as attrs for the resource, with every required
 //     arg as a function arg, and optional args as null. The attrs are meant to be passed into the
@@ -23,6 +23,8 @@ const (
 //   - A `with{ATTRIBUTE_NAME}` function for every attribute, which will generate a mixin to update the given resource
 //     block in the document. Note that this flavor of the function will require the resource name so that it knows
 //     which resource to update.
+//   - Each nested block will be an object attributed by the block name in the resulting jsonnet document. The nested
+//     block will have it's own `new` and `with{ATTRIBUTE_NAME}` functions.
 func RenderResource(resrcType string, schema *tfjson.SchemaBlock) (*j.Doc, error) {
 	// TODO: replace with github.com/tf-libsonnet/core
 	locals := []j.LocalType{
@@ -43,11 +45,10 @@ func RenderResource(resrcType string, schema *tfjson.SchemaBlock) (*j.Doc, error
 	rootFields = append(rootFields, j.Hidden(attrConstructor))
 
 	for attr, cfg := range schema.Attributes {
-		attrFn, err := withAttributeFn(resrcType, attr, cfg)
-		if err != nil {
-			return nil, err
-		}
-		rootFields = append(rootFields, j.Hidden(attrFn))
+		rootFields = append(
+			rootFields,
+			j.Hidden(withAttributeFn(resrcType, attr, cfg)),
+		)
 	}
 
 	rootObj := j.Object(resrcType, rootFields...)
@@ -109,15 +110,22 @@ func resrcAttrsConstructor(schema *tfjson.SchemaBlock) (j.FuncType, error) {
 func withAttributeFn(
 	resrcType, attr string,
 	cfg *tfjson.SchemaAttribute,
-) (j.FuncType, error) {
+) j.FuncType {
 	valueArgName := "value"
+	// NOTE: this is a hack to work around the lack of functionality to introduce a reference key merge in the builder
+	// library. This takes advantage of a quirk where the builder outputs the literal string name of the object as the key
+	// for the merge operation. So using the reference name wrapped in [] as the merge key results in the literal
+	// `[REFERENCE]+` without quotes being printed out in the resulting jsonnet, which is what we want.
+	// The maintainers of the k8s generator library may change this behavior in the future!
+	refMerge := fmt.Sprintf("[%s]", resourceLabelArg)
+
 	result := j.Object("",
 		j.Merge(j.Object("resource",
 			j.Merge(j.Object(resrcType,
-				j.Merge(j.Object(fmt.Sprintf("[%s]", resourceLabelArg),
+				j.Merge(j.Object(refMerge,
 					j.Ref(attr, valueArgName))))))))
 	return j.Func(fmt.Sprintf("with%s", strcase.ToCamel(attr)),
 		j.Args(j.Required(j.String(resourceLabelArg, "")), j.Required(j.String(valueArgName, ""))),
 		result,
-	), nil
+	)
 }
