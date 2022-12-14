@@ -22,7 +22,27 @@ func TestRenderResource(t *testing.T) {
 	schema := loadSchema(g, tfcoremockSchemaF)
 	simpleResource := schema.ResourceSchemas["tfcoremock_simple_resource"]
 
-	jt, err := RenderResource("tfcoremock_simple_resource", simpleResource.Block)
+	jt, err := RenderResourceOrDataSource(
+		IsResource, "tfcoremock_simple_resource", simpleResource.Block,
+	)
+	g.Expect(err).NotTo(HaveOccurred())
+
+	out, err := formatter.Format("", jt.String(), formatter.DefaultOptions())
+	g.Expect(err).NotTo(HaveOccurred())
+
+	t.Logf(out)
+}
+
+func TestRenderDataSource(t *testing.T) {
+	t.Parallel()
+	g := NewGomegaWithT(t)
+
+	schema := loadSchema(g, tfcoremockSchemaF)
+	simpleResource := schema.DataSourceSchemas["tfcoremock_simple_resource"]
+
+	jt, err := RenderResourceOrDataSource(
+		IsDataSource, "tfcoremock_simple_resource", simpleResource.Block,
+	)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	out, err := formatter.Format("", jt.String(), formatter.DefaultOptions())
