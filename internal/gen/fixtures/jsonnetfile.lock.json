@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "dependencies": [
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/fensak-io/tf-libsonnet.git",
+          "subdir": ""
+        }
+      },
+      "version": "9c1df8b7cebc449bdc61603a3caf7236cbf8ed93",
+      "sum": "poXEAhAr/nzbaiqEIF+XgaT+jbo554ZYMqS/QTen1f8="
+    }
+  ],
+  "legacyImports": false
+}
