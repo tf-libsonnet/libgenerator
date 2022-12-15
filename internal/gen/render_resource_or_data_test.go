@@ -15,7 +15,25 @@ const (
 	tfcoremockSchemaF = "fixtures/tfcoremock_schema.json"
 )
 
-func TestRenderResource(t *testing.T) {
+func TestRenderResourceComplex(t *testing.T) {
+	t.Parallel()
+	g := NewGomegaWithT(t)
+
+	schema := loadSchema(g, tfcoremockSchemaF)
+	complexResource := schema.ResourceSchemas["tfcoremock_complex_resource"]
+
+	jt, err := RenderResourceOrDataSource(
+		IsResource, "tfcoremock_complex_resource", complexResource.Block,
+	)
+	g.Expect(err).NotTo(HaveOccurred())
+
+	out, err := formatter.Format("", jt.String(), formatter.DefaultOptions())
+	g.Expect(err).NotTo(HaveOccurred())
+
+	t.Logf(out)
+}
+
+func TestRenderResourceSimple(t *testing.T) {
 	t.Parallel()
 	g := NewGomegaWithT(t)
 
@@ -33,7 +51,7 @@ func TestRenderResource(t *testing.T) {
 	t.Logf(out)
 }
 
-func TestRenderDataSource(t *testing.T) {
+func TestRenderDataSourceSimple(t *testing.T) {
 	t.Parallel()
 	g := NewGomegaWithT(t)
 
