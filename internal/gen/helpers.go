@@ -2,8 +2,14 @@ package gen
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
+	"github.com/google/go-jsonnet/formatter"
 	tfjson "github.com/hashicorp/terraform-json"
+	tfaddr "github.com/hashicorp/terraform-registry-address"
+	j "github.com/jsonnet-libs/k8s/pkg/builder"
 )
 
 type collectionType uint8
@@ -47,6 +53,7 @@ const (
 )
 
 const (
+	mainLibsonnetName        = "main.libsonnet"
 	constructorFnName        = "new"
 	newAttrsFnName           = "newAttrs"
 	resourceLabelArg         = "resourceLabel"
@@ -92,4 +99,58 @@ func getInputAttributes(schema *tfjson.SchemaBlock) map[string]*tfjson.SchemaAtt
 		out[name] = cfg
 	}
 	return out
+}
+
+// writeDocToFile writes the given jsonnet document to a file. Note that this
+// runs the document through the jsonnet-fmt prior to saving to disk.
+func writeDocToFile(doc *j.Doc, fpath string) error {
+	docFmted, err := formatter.Format("", doc.String(), formatter.DefaultOptions())
+	if err != nil {
+		return err
+	}
+
+	fdir := filepath.Dir(fpath)
+	if err := os.MkdirAll(fdir, 0755); err != nil {
+		return err
+	}
+
+	return os.WriteFile(fpath, []byte(docFmted), 0644)
+}
+
+// resourceNameToLibsonnetName returns the libsonnet filename given a resource
+// name. This expects a name of the form PROVIDER_RESOURCE, and returns
+// the name as resource_RESOURCE.libsonnet.
+// If the name already omits the provider, then provider must be set as empty
+// string.
+func resourceNameToLibsonnetName(provider, name string) string {
+	nameWOProvider := name
+	if provider != "" {
+		nameWOProvider = nameWithoutProvider(provider, name)
+	}
+	return fmt.Sprintf("resource_%s.libsonnet", nameWOProvider)
+}
+
+// dataSourceNameToLibsonnetName returns the libsonnet filename given a data
+// source name. This expects a name of the form PROVIDER_DATASRC, and returns
+// the name as data_DATASRC.libsonnet.
+// If the name already omits the provider, then provider must be set as empty
+// string.
+func dataSourceNameToLibsonnetName(provider, name string) string {
+	nameWOProvider := name
+	if provider != "" {
+		nameWOProvider = nameWithoutProvider(provider, name)
+	}
+	return fmt.Sprintf("data_%s.libsonnet", nameWOProvider)
+}
+
+func nameWithoutProvider(provider, name string) string {
+	return strings.TrimPrefix(name, provider+"_")
+}
+
+func ProviderNameFromAddr(addr string) (string, error) {
+	providerAddr, err := tfaddr.ParseProviderSource(addr)
+	if err != nil {
+		return "", err
+	}
+	return providerAddr.Type, nil
 }

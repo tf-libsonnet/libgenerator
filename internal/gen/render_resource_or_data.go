@@ -8,7 +8,7 @@ import (
 	j "github.com/jsonnet-libs/k8s/pkg/builder"
 )
 
-// RenderResourceOrDataSource will render the libsonnet code for constructing a resource or data source definition for
+// renderResourceOrDataSource will render the libsonnet code for constructing a resource or data source definition for
 // the given Terraform block. The generated libsonnet code has the following canonical pattern:
 //
 //   - `newAttrs`: A function to construct an object that can be passed in as attrs for the resource or data source,
@@ -22,7 +22,7 @@ import (
 //   - Each nested block will be an object attributed by the block name in the resulting jsonnet document. The nested
 //     block will have its own `new` functions for constructing the nested block object.
 //   - Nested blocks will recursively nest subblocks if the nested blocks have its own nested blocks.
-func RenderResourceOrDataSource(
+func renderResourceOrDataSource(
 	resrcOrDataSrc resourceOrDataSource,
 	typ string,
 	schema *tfjson.SchemaBlock,
