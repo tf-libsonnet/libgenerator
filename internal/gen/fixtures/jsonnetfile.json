@@ -4,7 +4,7 @@
     {
       "source": {
         "git": {
-          "remote": "https://github.com/fensak-io/tf-libsonnet.git",
+          "remote": "https://github.com/tf-libsonnet/core.git",
           "subdir": ""
         }
       },

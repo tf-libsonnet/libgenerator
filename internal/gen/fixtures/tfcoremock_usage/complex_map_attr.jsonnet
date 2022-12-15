@@ -1,5 +1,5 @@
 local tfcoremock = import './tfcoremock/main.libsonnet';
-local tf = import 'github.com/fensak-io/tf-libsonnet/main.libsonnet';
+local tf = import 'github.com/tf-libsonnet/core/main.libsonnet';
 
 tfcoremock.complex_resource.new('foo', map={
   hello: { string: 'hello' },

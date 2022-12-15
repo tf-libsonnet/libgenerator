@@ -27,9 +27,8 @@ func renderResourceOrDataSource(
 	typ string,
 	schema *tfjson.SchemaBlock,
 ) (*j.Doc, error) {
-	// TODO: replace with github.com/tf-libsonnet/core
 	locals := []j.LocalType{
-		j.Local(j.Import("tf", "github.com/fensak-io/tf-libsonnet/main.libsonnet")),
+		j.Local(j.Import("tf", "github.com/tf-libsonnet/core/main.libsonnet")),
 	}
 	rootFields := []j.Type{}
 

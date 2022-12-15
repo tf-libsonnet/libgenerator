@@ -1,5 +1,5 @@
 local tfcoremock = import './tfcoremock/main.libsonnet';
-local tf = import 'github.com/fensak-io/tf-libsonnet/main.libsonnet';
+local tf = import 'github.com/tf-libsonnet/core/main.libsonnet';
 
 local o =
   tfcoremock.simple_resource.new('foo', string='test-render-library')
