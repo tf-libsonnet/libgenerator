@@ -41,6 +41,10 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
+      - name: install jsonnet-bundler
+        run: |
+          go install github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb@latest
+
       - name: run tests
         run: |
           go test -v ./...
