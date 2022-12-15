@@ -26,6 +26,17 @@ func (ct collectionType) String() string {
 	return unknown
 }
 
+func getCollectionType(nestingMode tfjson.SchemaNestingMode) collectionType {
+	switch nestingMode {
+	case tfjson.SchemaNestingModeList, tfjson.SchemaNestingModeSet:
+		return IsListOrSet
+	// TODO: nested object type should be special cased since it is a typed map
+	case tfjson.SchemaNestingModeMap, tfjson.SchemaNestingModeSingle, tfjson.SchemaNestingModeGroup:
+		return IsMap
+	}
+	panic(fmt.Errorf("Unsupported nesting mode: %s", nestingMode))
+}
+
 type resourceOrDataSource uint8
 
 const (
@@ -77,18 +88,8 @@ func getInputAttributes(schema *tfjson.SchemaBlock) map[string]*tfjson.SchemaAtt
 		if cfg.Computed && !cfg.Optional {
 			continue
 		}
+
 		out[name] = cfg
 	}
 	return out
-}
-
-func getCollectionType(nestingMode tfjson.SchemaNestingMode) collectionType {
-	switch nestingMode {
-	case tfjson.SchemaNestingModeList, tfjson.SchemaNestingModeSet:
-		return IsListOrSet
-	// TODO: nested object type should be special cased since it is a typed map
-	case tfjson.SchemaNestingModeMap, tfjson.SchemaNestingModeSingle, tfjson.SchemaNestingModeGroup:
-		return IsMap
-	}
-	panic(fmt.Errorf("Unsupported nesting mode: %s", nestingMode))
 }

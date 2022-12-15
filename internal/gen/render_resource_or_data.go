@@ -20,41 +20,30 @@ import (
 //     or data source block in the document. Note that this flavor of the function will require the name so that it
 //     knows which resource or data source to update.
 //   - Each nested block will be an object attributed by the block name in the resulting jsonnet document. The nested
-//     block will have it's own `new` and `with{ATTRIBUTE_NAME}` functions.
+//     block will have its own `new` functions for constructing the nested block object.
+//   - Nested blocks will recursively nest subblocks if the nested blocks have its own nested blocks.
 func RenderResourceOrDataSource(
 	resrcOrDataSrc resourceOrDataSource,
 	typ string,
 	schema *tfjson.SchemaBlock,
 ) (*j.Doc, error) {
-	var locals []j.LocalType
-	var rootFields []j.Type
-
-	if resrcOrDataSrc == IsNestedBlock {
-		// Nested block constructor should be an attrs constructor
-		constructor, err := attrsConstructor(constructorFnName, schema)
-		if err != nil {
-			return nil, err
-		}
-		rootFields = append(rootFields, j.Hidden(constructor))
-	} else {
-		// TODO: replace with github.com/tf-libsonnet/core
-		locals = append(
-			locals,
-			j.Local(j.Import("tf", "github.com/fensak-io/tf-libsonnet/main.libsonnet")),
-		)
-
-		constructor, err := constructor(resrcOrDataSrc, typ, schema)
-		if err != nil {
-			return nil, err
-		}
-		rootFields = append(rootFields, j.Hidden(constructor))
-
-		attrConstructor, err := attrsConstructor(newAttrsFnName, schema)
-		if err != nil {
-			return nil, err
-		}
-		rootFields = append(rootFields, j.Hidden(attrConstructor))
+	// TODO: replace with github.com/tf-libsonnet/core
+	locals := []j.LocalType{
+		j.Local(j.Import("tf", "github.com/fensak-io/tf-libsonnet/main.libsonnet")),
 	}
+	rootFields := []j.Type{}
+
+	constructor, err := constructor(resrcOrDataSrc, typ, schema)
+	if err != nil {
+		return nil, err
+	}
+	rootFields = append(rootFields, j.Hidden(constructor))
+
+	attrConstructor, err := attrsConstructor(newAttrsFnName, schema)
+	if err != nil {
+		return nil, err
+	}
+	rootFields = append(rootFields, j.Hidden(attrConstructor))
 
 	// Add modifier functions for each attribute
 	for attr, cfg := range getInputAttributes(schema) {
@@ -89,7 +78,11 @@ func RenderResourceOrDataSource(
 		}
 		rootFields = append(rootFields, j.Hidden(*mixinWithFn))
 
-		// TODO: implement nested block constructor
+		blockObj, err := nestedBlockObject(block, cfg)
+		if err != nil {
+			return nil, err
+		}
+		rootFields = append(rootFields, j.Hidden(blockObj))
 	}
 
 	rootObj := j.Object(typ, rootFields...)
@@ -171,7 +164,6 @@ func attrsConstructor(fnName string, schema *tfjson.SchemaBlock) (j.FuncType, er
 	), nil
 }
 
-// TODO: handle nested blocks correctly
 func withAttributeOrBlockFn(
 	resrcOrDataSrc resourceOrDataSource,
 	typ, attr string,
@@ -222,10 +214,27 @@ func withAttributeOrBlockFn(
 
 // nestedBlockObject renders the object with functions for constructing and modifying nested blocks on the resource or
 // data source.
+// For now, this is just the constructors. In the future, we may add mixin objects, but these are currently not
+// implemented due to the complexity involved in setting up the merge operators correctly across the nested levels.
 func nestedBlockObject(block string, cfg *tfjson.SchemaBlockType) (j.Type, error) {
-	doc, err := RenderResourceOrDataSource(IsNestedBlock, block, cfg.Block)
+	errRet := j.Null(block)
+	objFields := []j.Type{}
+
+	constructor, err := attrsConstructor(constructorFnName, cfg.Block)
 	if err != nil {
-		return j.Null(block), err
+		return errRet, err
 	}
-	return doc.Root, nil
+	objFields = append(objFields, j.Hidden(constructor))
+
+	// Add nested objects for deep nested blocks as well.
+	for nestedBlock, nestedCfg := range cfg.Block.NestedBlocks {
+		deepNestedBlockObj, err := nestedBlockObject(nestedBlock, nestedCfg)
+		if err != nil {
+			return errRet, err
+		}
+		objFields = append(objFields, j.Hidden(deepNestedBlockObj))
+	}
+
+	obj := j.Object(block, objFields...)
+	return obj, nil
 }

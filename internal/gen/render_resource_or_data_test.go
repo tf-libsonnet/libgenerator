@@ -69,6 +69,24 @@ func TestRenderDataSourceSimple(t *testing.T) {
 	t.Logf(out)
 }
 
+func TestRenderDataSourceComplex(t *testing.T) {
+	t.Parallel()
+	g := NewGomegaWithT(t)
+
+	schema := loadSchema(g, tfcoremockSchemaF)
+	complexResource := schema.DataSourceSchemas["tfcoremock_complex_resource"]
+
+	jt, err := RenderResourceOrDataSource(
+		IsDataSource, "tfcoremock_complex_resource", complexResource.Block,
+	)
+	g.Expect(err).NotTo(HaveOccurred())
+
+	out, err := formatter.Format("", jt.String(), formatter.DefaultOptions())
+	g.Expect(err).NotTo(HaveOccurred())
+
+	t.Logf(out)
+}
+
 func loadSchema(g *WithT, fixturePath string) *tfjson.ProviderSchema {
 	data, err := os.ReadFile(tfcoremockSchemaF)
 	g.Expect(err).NotTo(HaveOccurred())
