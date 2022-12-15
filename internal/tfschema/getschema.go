@@ -80,10 +80,20 @@ func GetSchemas(
 	ctx context.Context,
 	tfVersion *version.Version,
 	req SchemaRequestList,
-) (*tfjson.ProviderSchemas, error) {
+) (out *tfjson.ProviderSchemas, returnErr error) {
 	// Ensure Terraform binary is available.
 	inst := install.NewInstaller()
-	defer inst.Remove(ctx)
+	// Use an anon function so we handle the error for inst.Remove
+	defer func() {
+		if err := inst.Remove(ctx); err != nil {
+			logger.Errorf("Error removing installed Terraform files: %s", err)
+
+			// Bubble remove error to the return error if an error hasn't been reported yet.
+			if returnErr == nil {
+				returnErr = err
+			}
+		}
+	}()
 
 	logger.Debugf("Finding or installing terraform version %s", tfVersion)
 	tfPath, err := inst.Ensure(ctx, []src.Source{

@@ -100,13 +100,13 @@ func evalJsonnetAndRunTerraform(g *WithT, tmpWorkDir, jsonnetFile string) {
 	g.Expect(err).NotTo(HaveOccurred())
 	defer os.RemoveAll(tfWorkDir)
 
-	tmpMainTF := filepath.Join(tmpWorkDir, "main.tf.json")
+	tmpMainTF := filepath.Join(tfWorkDir, "main.tf.json")
 	g.Expect(os.WriteFile(tmpMainTF, []byte(rendered), 0644)).To(Succeed())
 
 	// Load Terraform and apply the rendered tf file
 	tfPath, err := exec.LookPath("terraform")
 	g.Expect(err).NotTo(HaveOccurred())
-	tf, err := tfexec.NewTerraform(tmpWorkDir, tfPath)
+	tf, err := tfexec.NewTerraform(tfWorkDir, tfPath)
 	g.Expect(err).NotTo(HaveOccurred())
 	tf.SetStdout(os.Stdout)
 	tf.SetStderr(os.Stderr)

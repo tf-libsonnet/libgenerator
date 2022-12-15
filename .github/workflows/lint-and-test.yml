@@ -1,0 +1,50 @@
+name: lint-and-test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  golangci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613 # v3.4.0
+        with:
+          go-version: 1.19
+
+      - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@0ad9a0988b3973e851ab0a07adf248ec2e100376 # v3.3.1
+        with:
+          version: v1.50.1
+          args: "--timeout=10m"
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
+
+      - uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1 # v2.0.3
+        with:
+          terraform_version: 1.3.6
+          terraform_wrapper: false
+
+      - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613 # v3.4.0
+        with:
+          go-version: 1.19
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: install jsonnet-bundler
+        run: |
+          go install github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb@latest
+
+      - name: run tests
+        run: |
+          go test -v ./...
