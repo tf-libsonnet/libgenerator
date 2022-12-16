@@ -25,7 +25,25 @@ func RenderLibrary(
 	schema *tfjson.ProviderSchema,
 ) error {
 	libraryFPath := filepath.Join(outDir, "_gen")
-	idx := indexImports{}
+	idx := indexImports{
+		providerName: providerName,
+	}
+
+	logger.Info("Rendering provider config generator")
+	doc, err := renderProvider(providerName, schema.ConfigSchema.Block)
+	if err != nil {
+		return err
+	}
+
+	providerFPath := filepath.Join(
+		libraryFPath,
+		providerNameToLibsonnetName(providerName),
+	)
+	if err := writeDocToFile(logger, doc, providerFPath); err != nil {
+		return err
+	}
+
+	// Render the resource libsonnet files
 	for resrcName, resrcSchema := range schema.ResourceSchemas {
 		logger.Infof("Rendering %s", resrcName)
 
@@ -50,6 +68,7 @@ func RenderLibrary(
 		}
 	}
 
+	// Render the data source libsonnet files
 	for datasrcName, datasrcSchema := range schema.DataSourceSchemas {
 		logger.Infof("Rendering %s", datasrcName)
 
@@ -74,6 +93,7 @@ func RenderLibrary(
 		}
 	}
 
+	// Render the _gen index file
 	logger.Info("Rendering index files")
 	genIdx := renderIndex(idx)
 	genIdxFPath := filepath.Join(libraryFPath, mainLibsonnetName)
@@ -81,6 +101,7 @@ func RenderLibrary(
 		return err
 	}
 
+	// Render the main index file
 	mainImp := j.Import("", filepath.Join(".", "_gen", mainLibsonnetName))
 	mainIdx := j.Doc{Root: mainImp}
 	mainIdxFPath := filepath.Join(outDir, mainLibsonnetName)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/google/go-jsonnet/formatter"
@@ -48,6 +49,7 @@ type resourceOrDataSource uint8
 
 const (
 	IsUnknown resourceOrDataSource = iota
+	IsProvider
 	IsResource
 	IsDataSource
 	IsNestedBlock
@@ -111,6 +113,73 @@ func (a sortedTypeList) Swap(i, j int) {
 }
 
 // END sort interface
+
+// paramList represents a list of parameters for a constructor function.
+type paramList struct {
+	// params is the list of parameters that the constructor should accept. This includes all attributes and nested
+	// blocks for a given resource/data source/provider schema.
+	params sortedTypeList
+
+	// tfFieldSetters is the list of object field references that sets the resulting terraform object fields based on the
+	// parameters in the params list.
+	tfFieldSetters sortedTypeList
+
+	// attrsCallArgs is the list of parameter references that can be used to forward to another constructor that takes in
+	// the params.
+	attrsCallArgs sortedTypeList
+}
+
+// constructorParamList returns the list of Jsonnet Type objects that should be accepted as a parameter for the
+// constructor. This will iterate all attributes and nested blocks to generate a corresponding parameter name for each
+// one, marking required attributes as required while default nulling all optionals.
+//
+// The resulting list will be sorted into two sections, with the required parameters iterated first. Within each
+// section, the parameters are sorted by name.
+//
+// This also returns the list of field references for setting the object fields by the resulting parameter. Refer to
+// paramList struct for more info.
+func constructorParamList(schema *tfjson.SchemaBlock) paramList {
+	params := sortedTypeList{}
+	fields := sortedTypeList{}
+	attrsCallArgs := sortedTypeList{}
+
+	// Add params for the attributes
+	for attr, cfg := range getInputAttributes(schema) {
+		// Default all the optional params to null, which is treated the same as omitting it from the param list.
+		var param j.Type = j.Null(attr)
+		if cfg.attr.Required {
+			param = j.Required(param)
+		}
+		params = append(params, param)
+
+		fields = append(fields, j.Ref(cfg.tfName, attr))
+		attrsCallArgs = append(attrsCallArgs, j.Ref(attr, attr))
+	}
+
+	// Add params for the nested blocks
+	for block, cfg := range getNestedBlocks(schema) {
+		// Nested blocks can not be labeled as required so always assume optional.
+		params = append(params, j.Null(block))
+
+		fields = append(fields, j.Ref(cfg.tfName, block))
+		attrsCallArgs = append(attrsCallArgs, j.Ref(block, block))
+	}
+
+	sort.Sort(params)
+	sort.Sort(fields)
+	sort.Sort(attrsCallArgs)
+
+	return paramList{
+		params:         params,
+		tfFieldSetters: fields,
+		attrsCallArgs:  attrsCallArgs,
+	}
+}
+
+// importCore returns the import call for importing the core library.
+func importCore() j.Type {
+	return j.Import("tf", "github.com/tf-libsonnet/core/main.libsonnet")
+}
 
 type attribute struct {
 	tfName string
@@ -187,6 +256,12 @@ func writeDocToFile(logger *zap.SugaredLogger, doc *j.Doc, fpath string) error {
 	}
 
 	return os.WriteFile(fpath, []byte(docFmted), 0644)
+}
+
+// providerNameToLibsonnetName returns the libsonnet filename for the given provider. Returns the name as
+// provider_PROVIDER.libsonnet.
+func providerNameToLibsonnetName(name string) string {
+	return fmt.Sprintf("provider_%s.libsonnet", name)
 }
 
 // resourceNameToLibsonnetName returns the libsonnet filename given a resource

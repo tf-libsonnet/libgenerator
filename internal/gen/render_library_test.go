@@ -82,7 +82,10 @@ func runTestJsonnetFile(jsf, workDir string) (string, error) {
 	return vm.EvaluateFile(jsf)
 }
 
-func evalJsonnetAndRunTerraform(g *WithT, tmpWorkDir, jsonnetFile string) {
+func evalJsonnetAndRunTerraform(
+	g *WithT,
+	tmpWorkDir, jsonnetFile string,
+) {
 	jsfBase := filepath.Base(jsonnetFile)
 
 	// Copy jsonnet file from fixture dir to tmp working dir and run it through VM to render it.
@@ -115,8 +118,14 @@ func evalJsonnetAndRunTerraform(g *WithT, tmpWorkDir, jsonnetFile string) {
 	g.Expect(tf.Init(ctx)).To(Succeed())
 	g.Expect(tf.Apply(ctx)).To(Succeed())
 
-	// Load the expected output and compare it against the output from Terraform
+	// Load the expected output and compare it against the output from Terraform, if an expected out file exists.
 	expectedOutFP := filepath.Join(renderLibraryTestCasesExpectedOutDir, jsfBase+".tfoutputs.json")
+
+	_, statErr := os.Stat(expectedOutFP)
+	if statErr != nil {
+		return
+	}
+
 	expectedOutJSON, err := os.ReadFile(expectedOutFP)
 	g.Expect(err).NotTo(HaveOccurred())
 	var expectedOutMap map[string]interface{}

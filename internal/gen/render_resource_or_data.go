@@ -29,7 +29,7 @@ func renderResourceOrDataSource(
 	schema *tfjson.SchemaBlock,
 ) (*j.Doc, error) {
 	locals := []j.LocalType{
-		j.Local(j.Import("tf", "github.com/tf-libsonnet/core/main.libsonnet")),
+		j.Local(importCore()),
 	}
 	rootFields := sortedTypeList{}
 
@@ -92,43 +92,20 @@ func renderResourceOrDataSource(
 }
 
 func constructor(resrcOrDataSrc resourceOrDataSource, typ string, schema *tfjson.SchemaBlock) (j.FuncType, error) {
-	params := sortedTypeList{}
-	attrCallArgs := sortedTypeList{}
-
-	// Add params for the attributes
-	for attr, cfg := range getInputAttributes(schema) {
-		// Default all the optional params to null, which is treated the same as omitting it from the param list.
-		var param j.Type = j.Null(attr)
-		if cfg.attr.Required {
-			param = j.Required(param)
-		}
-		params = append(params, param)
-
-		attrCallArgs = append(attrCallArgs, j.Ref(attr, attr))
-	}
-
-	// Add params for the nested blocks
-	for block := range getNestedBlocks(schema) {
-		// Nested blocks can not be labeled as required so always assume optional.
-		params = append(params, j.Null(block))
-		attrCallArgs = append(attrCallArgs, j.Ref(block, block))
-	}
-
-	sort.Sort(params)
-	sort.Sort(attrCallArgs)
+	params := constructorParamList(schema)
 
 	// Prepend the label param after it has been sorted so that it is always the first function parameter.
 	labelParam := j.Required(j.String(resrcOrDataSrc.labelArg(), ""))
-	params = append(sortedTypeList{labelParam}, params...)
+	params.params = append(sortedTypeList{labelParam}, params.params...)
 
-	attrs := j.Call("attrs", "self."+newAttrsFnName, attrCallArgs)
-	fn := "tf.withResource"
+	attrs := j.Call("attrs", "self."+newAttrsFnName, params.attrsCallArgs)
+	fnCall := "tf.withResource"
 	if resrcOrDataSrc == IsDataSource {
-		fn = "tf.withData"
+		fnCall = "tf.withData"
 	}
 	resource := j.Call(
 		"",
-		fn,
+		fnCall,
 		[]j.Type{
 			j.String("type", typ),
 			j.Ref("label", resrcOrDataSrc.labelArg()),
@@ -136,42 +113,30 @@ func constructor(resrcOrDataSrc resourceOrDataSource, typ string, schema *tfjson
 		},
 	)
 
-	return j.LargeFunc(constructorFnName, j.Args(params...), resource), nil
+	fn := j.LargeFunc(
+		constructorFnName,
+		j.Args(params.params...),
+		resource,
+	)
+	return fn, nil
 }
 
 func attrsConstructor(fnName string, schema *tfjson.SchemaBlock) (j.FuncType, error) {
-	fields := sortedTypeList{}
-	params := sortedTypeList{}
-
-	// Add params for the attributes
-	for attr, cfg := range getInputAttributes(schema) {
-		fields = append(fields, j.Ref(cfg.tfName, attr))
-
-		// Default all the optional params to null, which is treated the same as omitting it from the param list.
-		var param j.Type = j.Null(attr)
-		if cfg.attr.Required {
-			param = j.Required(param)
-		}
-		params = append(params, param)
-	}
-
-	// Add params for the nested blocks
-	for block, cfg := range getNestedBlocks(schema) {
-		fields = append(fields, j.Ref(cfg.tfName, block))
-
-		// Nested blocks can not be labeled as required so always assume optional.
-		params = append(params, j.Null(block))
-	}
-
-	sort.Sort(fields)
-	sort.Sort(params)
+	params := constructorParamList(schema)
 
 	// Prune null attributes so they are omitted from the final json.
-	// Although this is not strictly necessary to do, it makes the rendered json nice and tidy.
-	return j.LargeFunc(fnName,
-		j.Args(params...),
-		j.Call("", "std.prune", []j.Type{j.Object("a", fields...)}),
-	), nil
+	// Although this is not strictly necessary to do, it makes the rendered terraform json (NOT jsonnet code!) nice and
+	// tidy.
+	fn := j.LargeFunc(
+		fnName,
+		j.Args(params.params...),
+		j.Call(
+			"",
+			"std.prune",
+			[]j.Type{j.Object("a", params.tfFieldSetters...)},
+		),
+	)
+	return fn, nil
 }
 
 func withAttributeOrBlockFn(
