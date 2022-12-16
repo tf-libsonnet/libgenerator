@@ -95,8 +95,13 @@ func constructor(resrcOrDataSrc resourceOrDataSource, typ string, schema *tfjson
 	params := constructorParamList(schema)
 
 	// Prepend the label param after it has been sorted so that it is always the first function parameter.
-	labelParam := j.Required(j.String(resrcOrDataSrc.labelArg(), ""))
+	labelParamName := resrcOrDataSrc.labelArg()
+	labelParam := j.Required(j.String(labelParamName, ""))
 	params.params = append(sortedTypeList{labelParam}, params.params...)
+
+	// Append the `_meta` param after it has been sorted so that it is always the last function parameter.
+	metaParam := j.Object(metaParamName)
+	params.params = append(params.params, metaParam)
 
 	attrs := j.Call("attrs", "self."+newAttrsFnName, params.attrsCallArgs)
 	fnCall := "tf.withResource"
@@ -108,8 +113,9 @@ func constructor(resrcOrDataSrc resourceOrDataSource, typ string, schema *tfjson
 		fnCall,
 		[]j.Type{
 			j.String("type", typ),
-			j.Ref("label", resrcOrDataSrc.labelArg()),
+			j.Ref("label", labelParamName),
 			attrs,
+			j.Ref(metaParamName, metaParamName),
 		},
 	)
 

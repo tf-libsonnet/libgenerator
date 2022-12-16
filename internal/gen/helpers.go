@@ -63,6 +63,7 @@ const (
 	resourceInjectAttrName   = "resource"
 	dataSourceLabelArg       = "dataSrcLabel"
 	dataSourceInjectAttrName = "data"
+	metaParamName            = "_meta"
 	unknown                  = "__UNKNOWN__"
 )
 
