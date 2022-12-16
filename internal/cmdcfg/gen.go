@@ -25,7 +25,7 @@ func init() {
 	addProviderAndTFVersionFlags(flags)
 	flags.String(
 		outDirFlagName,
-		".",
+		"./out",
 		strings.TrimSpace(`
 Path to the output directory where the libraries should be rendered. Each
 provider will be rendered to a subdirectory of the output directory with the
