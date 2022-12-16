@@ -71,6 +71,7 @@ The following table clarifies the current status of the providers according to t
 | Provider                                                               | Status |
 |------------------------------------------------------------------------|--------|
 | [azurerm](https://github.com/tf-libsonnet/hashicorp-azurerm)           | Beta   |
+| [hcp](https://github.com/tf-libsonnet/hashicorp-hcp)                   | Beta   |
 | [null](https://github.com/tf-libsonnet/hashicorp-null)                 | Beta   |
 | [DopplerHQ/doppler](https://github.com/tf-libsonnet/dopplerhq-doppler) | Beta   |
 | [aws](https://github.com/tf-libsonnet/hashicorp-aws)                   | Alpha  |

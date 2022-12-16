@@ -40,6 +40,14 @@
     }
   },
   {
+    "repo": "hashicorp-hcp",
+    "subdir": "0.x",
+    "provider": {
+      "src": "hashicorp/hcp",
+      "version": "=0.52.0"
+    }
+  },
+  {
     "repo": "dopplerhq-doppler",
     "subdir": "1.x",
     "provider": {
