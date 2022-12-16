@@ -14,5 +14,13 @@
       "src": "hashicorp/azurerm",
       "version": "=3.36.0"
     }
+  },
+  {
+    "repo": "dopplerhq-doppler",
+    "subdir": "1.x",
+    "provider": {
+      "src": "DopplerHQ/doppler",
+      "version": "=1.1.6"
+    }
   }
 ]

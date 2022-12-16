@@ -68,10 +68,11 @@ We define the following stability levels for the generated provider libraries:
 
 The following table clarifies the current status of the providers according to the aforementioned stability levels:
 
-| Provider                                                     | Status |
-|--------------------------------------------------------------|--------|
-| [azurerm](https://github.com/tf-libsonnet/hashicorp-azurerm) | Beta   |
-| [null](https://github.com/tf-libsonnet/hashicorp-null)       | Beta   |
+| Provider                                                               | Status |
+|------------------------------------------------------------------------|--------|
+| [azurerm](https://github.com/tf-libsonnet/hashicorp-azurerm)           | Beta   |
+| [null](https://github.com/tf-libsonnet/hashicorp-null)                 | Beta   |
+| [DopplerHQ/doppler](https://github.com/tf-libsonnet/dopplerhq-doppler) | Beta   |
 
 Note that the stability levels within a provider library will vary across resources and data sources. That is, some
 resources within a provider may be considered **Alpha** level, while others may be **Stable**. In general, a **Stable**
