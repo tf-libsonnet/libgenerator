@@ -92,32 +92,34 @@ func renderResourceOrDataSource(
 }
 
 func constructor(resrcOrDataSrc resourceOrDataSource, typ string, schema *tfjson.SchemaBlock) (j.FuncType, error) {
-	args := sortedTypeList{
-		j.Required(j.String(resrcOrDataSrc.labelArg(), "")),
-	}
+	params := sortedTypeList{}
 	attrCallArgs := sortedTypeList{}
 
-	// Add args for the attributes
+	// Add params for the attributes
 	for attr, cfg := range getInputAttributes(schema) {
-		// Default all the optional args to null, which is treated the same as omitting it from the arg list.
-		var arg j.Type = j.Null(attr)
+		// Default all the optional params to null, which is treated the same as omitting it from the param list.
+		var param j.Type = j.Null(attr)
 		if cfg.attr.Required {
-			arg = j.Required(arg)
+			param = j.Required(param)
 		}
-		args = append(args, arg)
+		params = append(params, param)
 
 		attrCallArgs = append(attrCallArgs, j.Ref(attr, attr))
 	}
 
-	// Add args for the nested blocks
+	// Add params for the nested blocks
 	for block := range getNestedBlocks(schema) {
 		// Nested blocks can not be labeled as required so always assume optional.
-		args = append(args, j.Null(block))
+		params = append(params, j.Null(block))
 		attrCallArgs = append(attrCallArgs, j.Ref(block, block))
 	}
 
-	sort.Sort(args)
+	sort.Sort(params)
 	sort.Sort(attrCallArgs)
+
+	// Prepend the label param after it has been sorted so that it is always the first function parameter.
+	labelParam := j.Required(j.String(resrcOrDataSrc.labelArg(), ""))
+	params = append(sortedTypeList{labelParam}, params...)
 
 	attrs := j.Call("attrs", "self."+newAttrsFnName, attrCallArgs)
 	fn := "tf.withResource"
@@ -134,40 +136,40 @@ func constructor(resrcOrDataSrc resourceOrDataSource, typ string, schema *tfjson
 		},
 	)
 
-	return j.LargeFunc(constructorFnName, j.Args(args...), resource), nil
+	return j.LargeFunc(constructorFnName, j.Args(params...), resource), nil
 }
 
 func attrsConstructor(fnName string, schema *tfjson.SchemaBlock) (j.FuncType, error) {
 	fields := sortedTypeList{}
-	args := sortedTypeList{}
+	params := sortedTypeList{}
 
-	// Add args for the attributes
+	// Add params for the attributes
 	for attr, cfg := range getInputAttributes(schema) {
 		fields = append(fields, j.Ref(cfg.tfName, attr))
 
-		// Default all the optional args to null, which is treated the same as omitting it from the arg list.
-		var arg j.Type = j.Null(attr)
+		// Default all the optional params to null, which is treated the same as omitting it from the param list.
+		var param j.Type = j.Null(attr)
 		if cfg.attr.Required {
-			arg = j.Required(arg)
+			param = j.Required(param)
 		}
-		args = append(args, arg)
+		params = append(params, param)
 	}
 
-	// Add args for the nested blocks
+	// Add params for the nested blocks
 	for block, cfg := range getNestedBlocks(schema) {
 		fields = append(fields, j.Ref(cfg.tfName, block))
 
 		// Nested blocks can not be labeled as required so always assume optional.
-		args = append(args, j.Null(block))
+		params = append(params, j.Null(block))
 	}
 
 	sort.Sort(fields)
-	sort.Sort(args)
+	sort.Sort(params)
 
 	// Prune null attributes so they are omitted from the final json.
 	// Although this is not strictly necessary to do, it makes the rendered json nice and tidy.
 	return j.LargeFunc(fnName,
-		j.Args(args...),
+		j.Args(params...),
 		j.Call("", "std.prune", []j.Type{j.Object("a", fields...)}),
 	), nil
 }
