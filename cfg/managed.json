@@ -6,5 +6,13 @@
       "src": "hashicorp/null",
       "version": "=3.2.1"
     }
+  },
+  {
+    "repo": "hashicorp-azurerm",
+    "subdir": "3.x",
+    "provider": {
+      "src": "hashicorp/azurerm",
+      "version": "=3.36.0"
+    }
   }
 ]
