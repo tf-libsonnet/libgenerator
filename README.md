@@ -68,11 +68,11 @@ We define the following stability levels for the generated provider libraries:
 
 The following table clarifies the current status of the providers according to the aforementioned stability levels:
 
-| Provider                                                                         | Status |
-|----------------------------------------------------------------------------------|--------|
-| [azurerm](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs) | Beta   |
-| [null](https://registry.terraform.io/providers/hashicorp/null/latest/docs)       | Beta   |
+| Provider                                                     | Status |
+|--------------------------------------------------------------|--------|
+| [azurerm](https://github.com/tf-libsonnet/hashicorp-azurerm) | Beta   |
+| [null](https://github.com/tf-libsonnet/hashicorp-null)       | Beta   |
 
 Note that the stability levels within a provider library will vary across resources and data sources. That is, some
 resources within a provider may be considered **Alpha** level, while others may be **Stable**. In general, a **Stable**
-provider has a large enough community users such that most resources and data sources are covered.
+provider has a large enough community of users such that most resources and data sources are covered.
