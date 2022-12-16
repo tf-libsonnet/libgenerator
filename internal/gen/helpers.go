@@ -130,7 +130,9 @@ func getNestedBlocks(schema *tfjson.SchemaBlock) map[string]*block {
 // cause syntax errors. If the name is a reserved Jsonnet word, this will return the name with an _ suffix.
 func sanitizeForRef(name string) string {
 	reserved := []string{
-		"import",
+		"assert", "else", "error", "false", "for", "function", "if",
+		"import", "importstr", "in", "local", "null", "tailstrict",
+		"then", "self", "super", "true",
 	}
 	for _, w := range reserved {
 		if name == w {
