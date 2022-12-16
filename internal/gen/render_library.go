@@ -45,7 +45,7 @@ func RenderLibrary(
 			libraryFPath,
 			resourceNameToLibsonnetName(providerName, resrcName),
 		)
-		if err := writeDocToFile(doc, resrcFPath); err != nil {
+		if err := writeDocToFile(logger, doc, resrcFPath); err != nil {
 			return err
 		}
 	}
@@ -69,7 +69,7 @@ func RenderLibrary(
 			libraryFPath,
 			dataSourceNameToLibsonnetName(providerName, datasrcName),
 		)
-		if err := writeDocToFile(doc, datasrcFPath); err != nil {
+		if err := writeDocToFile(logger, doc, datasrcFPath); err != nil {
 			return err
 		}
 	}
@@ -77,14 +77,14 @@ func RenderLibrary(
 	logger.Info("Rendering index files")
 	genIdx := renderIndex(idx)
 	genIdxFPath := filepath.Join(libraryFPath, mainLibsonnetName)
-	if err := writeDocToFile(&genIdx, genIdxFPath); err != nil {
+	if err := writeDocToFile(logger, &genIdx, genIdxFPath); err != nil {
 		return err
 	}
 
 	mainImp := j.Import("", filepath.Join(".", "_gen", mainLibsonnetName))
 	mainIdx := j.Doc{Root: mainImp}
 	mainIdxFPath := filepath.Join(outDir, mainLibsonnetName)
-	if err := writeDocToFile(&mainIdx, mainIdxFPath); err != nil {
+	if err := writeDocToFile(logger, &mainIdx, mainIdxFPath); err != nil {
 		return err
 	}
 

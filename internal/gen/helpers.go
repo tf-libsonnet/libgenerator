@@ -10,6 +10,7 @@ import (
 	tfjson "github.com/hashicorp/terraform-json"
 	tfaddr "github.com/hashicorp/terraform-registry-address"
 	j "github.com/jsonnet-libs/k8s/pkg/builder"
+	"go.uber.org/zap"
 )
 
 type collectionType uint8
@@ -83,11 +84,16 @@ func (resrcOrDataSrc resourceOrDataSource) injectAttrName() string {
 	return unknown
 }
 
+type attribute struct {
+	tfName string
+	attr   *tfjson.SchemaAttribute
+}
+
 // getInputAttributes filters the schema attributes to only include those that are used as inputs. This skips:
 // - the magic id field present on all Terraform blocks.
 // - attributes that are read-only.
-func getInputAttributes(schema *tfjson.SchemaBlock) map[string]*tfjson.SchemaAttribute {
-	out := map[string]*tfjson.SchemaAttribute{}
+func getInputAttributes(schema *tfjson.SchemaBlock) map[string]*attribute {
+	out := map[string]*attribute{}
 	for name, cfg := range schema.Attributes {
 		if name == "id" {
 			continue
@@ -96,16 +102,52 @@ func getInputAttributes(schema *tfjson.SchemaBlock) map[string]*tfjson.SchemaAtt
 			continue
 		}
 
-		out[name] = cfg
+		out[sanitizeForRef(name)] = &attribute{
+			tfName: name,
+			attr:   cfg,
+		}
 	}
 	return out
 }
 
+type block struct {
+	tfName string
+	block  *tfjson.SchemaBlockType
+}
+
+func getNestedBlocks(schema *tfjson.SchemaBlock) map[string]*block {
+	out := map[string]*block{}
+	for name, cfg := range schema.NestedBlocks {
+		out[sanitizeForRef(name)] = &block{
+			tfName: name,
+			block:  cfg,
+		}
+	}
+	return out
+}
+
+// sanitizeForRef sanitizes attribute names that use reserved Jsonnet words like local and import so that they don't
+// cause syntax errors. If the name is a reserved Jsonnet word, this will return the name with an _ suffix.
+func sanitizeForRef(name string) string {
+	reserved := []string{
+		"import",
+	}
+	for _, w := range reserved {
+		if name == w {
+			return name + "_"
+		}
+	}
+	return name
+}
+
 // writeDocToFile writes the given jsonnet document to a file. Note that this
 // runs the document through the jsonnet-fmt prior to saving to disk.
-func writeDocToFile(doc *j.Doc, fpath string) error {
-	docFmted, err := formatter.Format("", doc.String(), formatter.DefaultOptions())
+func writeDocToFile(logger *zap.SugaredLogger, doc *j.Doc, fpath string) error {
+	docStr := doc.String()
+	docFmted, err := formatter.Format("", docStr, formatter.DefaultOptions())
 	if err != nil {
+		logger.Errorf("Error formatting %s", fpath)
+		logger.Debugf("Contents:\n%s", docStr)
 		return err
 	}
 
