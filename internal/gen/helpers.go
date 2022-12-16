@@ -84,6 +84,34 @@ func (resrcOrDataSrc resourceOrDataSource) injectAttrName() string {
 	return unknown
 }
 
+type sortedTypeList []j.Type
+
+// START sort interface
+func (a sortedTypeList) Len() int {
+	return len(a)
+}
+func (a sortedTypeList) Less(x, y int) bool {
+	xTyp := a[x]
+	yTyp := a[y]
+
+	_, xIsRequired := xTyp.(j.RequiredArgType)
+	_, yIsRequired := yTyp.(j.RequiredArgType)
+	if xIsRequired && !yIsRequired {
+		return true
+	}
+	if yIsRequired && !xIsRequired {
+		return false
+	}
+
+	return xTyp.Name() < yTyp.Name()
+}
+
+func (a sortedTypeList) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+
+// END sort interface
+
 type attribute struct {
 	tfName string
 	attr   *tfjson.SchemaAttribute

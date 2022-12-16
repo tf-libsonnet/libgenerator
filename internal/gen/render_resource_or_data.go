@@ -2,6 +2,7 @@ package gen
 
 import (
 	"fmt"
+	"sort"
 
 	tfjson "github.com/hashicorp/terraform-json"
 	"github.com/iancoleman/strcase"
@@ -30,7 +31,7 @@ func renderResourceOrDataSource(
 	locals := []j.LocalType{
 		j.Local(j.Import("tf", "github.com/tf-libsonnet/core/main.libsonnet")),
 	}
-	rootFields := []j.Type{}
+	rootFields := sortedTypeList{}
 
 	constructor, err := constructor(resrcOrDataSrc, typ, schema)
 	if err != nil {
@@ -84,15 +85,17 @@ func renderResourceOrDataSource(
 		rootFields = append(rootFields, j.Hidden(blockObj))
 	}
 
+	sort.Sort(rootFields)
+
 	rootObj := j.Object(typ, rootFields...)
 	return &j.Doc{Locals: locals, Root: rootObj}, nil
 }
 
 func constructor(resrcOrDataSrc resourceOrDataSource, typ string, schema *tfjson.SchemaBlock) (j.FuncType, error) {
-	args := []j.Type{
+	args := sortedTypeList{
 		j.Required(j.String(resrcOrDataSrc.labelArg(), "")),
 	}
-	attrCallArgs := []j.Type{}
+	attrCallArgs := sortedTypeList{}
 
 	// Add args for the attributes
 	for attr, cfg := range getInputAttributes(schema) {
@@ -113,6 +116,9 @@ func constructor(resrcOrDataSrc resourceOrDataSource, typ string, schema *tfjson
 		attrCallArgs = append(attrCallArgs, j.Ref(block, block))
 	}
 
+	sort.Sort(args)
+	sort.Sort(attrCallArgs)
+
 	attrs := j.Call("attrs", "self."+newAttrsFnName, attrCallArgs)
 	fn := "tf.withResource"
 	if resrcOrDataSrc == IsDataSource {
@@ -132,8 +138,8 @@ func constructor(resrcOrDataSrc resourceOrDataSource, typ string, schema *tfjson
 }
 
 func attrsConstructor(fnName string, schema *tfjson.SchemaBlock) (j.FuncType, error) {
-	fields := []j.Type{}
-	args := []j.Type{}
+	fields := sortedTypeList{}
+	args := sortedTypeList{}
 
 	// Add args for the attributes
 	for attr, cfg := range getInputAttributes(schema) {
@@ -154,6 +160,9 @@ func attrsConstructor(fnName string, schema *tfjson.SchemaBlock) (j.FuncType, er
 		// Nested blocks can not be labeled as required so always assume optional.
 		args = append(args, j.Null(block))
 	}
+
+	sort.Sort(fields)
+	sort.Sort(args)
 
 	// Prune null attributes so they are omitted from the final json.
 	// Although this is not strictly necessary to do, it makes the rendered json nice and tidy.
@@ -217,7 +226,7 @@ func withAttributeOrBlockFn(
 // implemented due to the complexity involved in setting up the merge operators correctly across the nested levels.
 func nestedBlockObject(cfg *block) (j.Type, error) {
 	errRet := j.Null(cfg.tfName)
-	objFields := []j.Type{}
+	objFields := sortedTypeList{}
 
 	constructor, err := attrsConstructor(constructorFnName, cfg.block.Block)
 	if err != nil {
@@ -233,6 +242,8 @@ func nestedBlockObject(cfg *block) (j.Type, error) {
 		}
 		objFields = append(objFields, j.Hidden(deepNestedBlockObj))
 	}
+
+	sort.Sort(objFields)
 
 	obj := j.Object(cfg.tfName, objFields...)
 	return obj, nil
