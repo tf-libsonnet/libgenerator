@@ -2,6 +2,7 @@ package gen
 
 import (
 	"path/filepath"
+	"sort"
 
 	j "github.com/jsonnet-libs/k8s/pkg/builder"
 )
@@ -12,7 +13,7 @@ type indexImports struct {
 }
 
 func renderIndex(idx indexImports) j.Doc {
-	fields := make([]j.Type, 0, len(idx.resources)+1)
+	fields := make(sortedTypeList, 0, len(idx.resources)+1)
 	for _, r := range idx.resources {
 		libsonnet := resourceNameToLibsonnetName("", r)
 		fields = append(
@@ -20,8 +21,9 @@ func renderIndex(idx indexImports) j.Doc {
 			j.Import(r, filepath.Join(".", libsonnet)),
 		)
 	}
+	sort.Sort(fields)
 
-	dataFields := make([]j.Type, 0, len(idx.dataSources))
+	dataFields := make(sortedTypeList, 0, len(idx.dataSources))
 	for _, d := range idx.dataSources {
 		libsonnet := dataSourceNameToLibsonnetName("", d)
 		dataFields = append(
@@ -29,6 +31,8 @@ func renderIndex(idx indexImports) j.Doc {
 			j.Import(d, filepath.Join(".", libsonnet)),
 		)
 	}
+	sort.Sort(dataFields)
+
 	// Data sources are namespaced with the data keyword.
 	fields = append(fields, j.Object("data", dataFields...))
 
