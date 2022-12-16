@@ -8,14 +8,15 @@ import (
 )
 
 type indexImports struct {
-	resources   []string
-	dataSources []string
+	providerName string
+	resources    []string
+	dataSources  []string
 }
 
 func renderIndex(idx indexImports) j.Doc {
-	fields := make(sortedTypeList, 0, len(idx.resources)+1)
+	fields := sortedTypeList{}
 	for _, r := range idx.resources {
-		libsonnet := resourceNameToLibsonnetName("", r)
+		libsonnet := resourceNameToLibsonnetName(idx.providerName, r)
 		fields = append(
 			fields,
 			j.Import(r, filepath.Join(".", libsonnet)),
@@ -23,9 +24,17 @@ func renderIndex(idx indexImports) j.Doc {
 	}
 	sort.Sort(fields)
 
-	dataFields := make(sortedTypeList, 0, len(idx.dataSources))
+	// Prepend the provider field after the resources are added and sorted so that it is always the first item in the
+	// object.
+	providerLibsonnet := providerNameToLibsonnetName(idx.providerName)
+	fields = append(
+		sortedTypeList{j.Import("provider", filepath.Join(".", providerLibsonnet))},
+		fields...,
+	)
+
+	dataFields := sortedTypeList{}
 	for _, d := range idx.dataSources {
-		libsonnet := dataSourceNameToLibsonnetName("", d)
+		libsonnet := dataSourceNameToLibsonnetName(idx.providerName, d)
 		dataFields = append(
 			dataFields,
 			j.Import(d, filepath.Join(".", libsonnet)),
