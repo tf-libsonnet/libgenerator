@@ -1,6 +1,8 @@
 package gen
 
 import (
+	"sort"
+
 	tfjson "github.com/hashicorp/terraform-json"
 	j "github.com/jsonnet-libs/k8s/pkg/builder"
 )
@@ -27,13 +29,16 @@ func renderProvider(name string, schema *tfjson.SchemaBlock) (*j.Doc, error) {
 	rootFields = append(rootFields, j.Hidden(attrsConstructor))
 
 	// Render constructor for nested blocks
+	nestedFields := sortedTypeList{}
 	for _, cfg := range getNestedBlocks(schema) {
 		blockObj, err := nestedBlockObject(cfg)
 		if err != nil {
 			return nil, err
 		}
-		rootFields = append(rootFields, j.Hidden(blockObj))
+		nestedFields = append(nestedFields, j.Hidden(blockObj))
 	}
+	sort.Sort(nestedFields)
+	rootFields = append(rootFields, nestedFields...)
 
 	rootObj := j.Object("provider", rootFields...)
 	return &j.Doc{Locals: locals, Root: rootObj}, nil
