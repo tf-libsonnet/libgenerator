@@ -1,6 +1,23 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:base"
+  "extends": ["config:base"],
+  "enabledManagers": ["regex"],
+  "packageRules": [
+    {
+      "matchManagers": ["regex"],
+      "extractVersion": "v(?<version>\\d+\\.\\d+\\.\\d+)"
+    }
+  ],
+  "regexManagers": [
+    {
+      "fileMatch": [
+        "(^|/)cfg/managed.json$"
+      ],
+      "matchStrings": [
+        "\\s+\"src\": \"(?<org>[^\/]+)\/(?<providerName>[^\"]+)\",\\s+\"version\": \"=(?<currentValue>.+)\""
+      ],
+      "depNameTemplate": "{{ org }}/terraform-provider-{{ providerName }}",
+      "datasourceTemplate": "github-releases"
+    }
   ]
 }
