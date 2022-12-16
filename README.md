@@ -73,6 +73,9 @@ The following table clarifies the current status of the providers according to t
 | [azurerm](https://github.com/tf-libsonnet/hashicorp-azurerm)           | Beta   |
 | [null](https://github.com/tf-libsonnet/hashicorp-null)                 | Beta   |
 | [DopplerHQ/doppler](https://github.com/tf-libsonnet/dopplerhq-doppler) | Beta   |
+| [aws](https://github.com/tf-libsonnet/hashicorp-aws)                   | Alpha  |
+| [google](https://github.com/tf-libsonnet/hashicorp-google)             | Alpha  |
+| [google-beta](https://github.com/tf-libsonnet/hashicorp-google-beta)   | Alpha  |
 
 Note that the stability levels within a provider library will vary across resources and data sources. That is, some
 resources within a provider may be considered **Alpha** level, while others may be **Stable**. In general, a **Stable**

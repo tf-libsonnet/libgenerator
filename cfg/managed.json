@@ -16,6 +16,30 @@
     }
   },
   {
+    "repo": "hashicorp-aws",
+    "subdir": "4.x",
+    "provider": {
+      "src": "hashicorp/aws",
+      "version": "=4.47.0"
+    }
+  },
+  {
+    "repo": "hashicorp-google",
+    "subdir": "4.x",
+    "provider": {
+      "src": "hashicorp/google",
+      "version": "=4.46.0"
+    }
+  },
+  {
+    "repo": "hashicorp-google-beta",
+    "subdir": "4.x",
+    "provider": {
+      "src": "hashicorp/google-beta",
+      "version": "=4.46.0"
+    }
+  },
+  {
     "repo": "dopplerhq-doppler",
     "subdir": "1.x",
     "provider": {
