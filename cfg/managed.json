@@ -16,6 +16,14 @@
     }
   },
   {
+    "repo": "hashicorp-azuread",
+    "subdir": "2.x",
+    "provider": {
+      "src": "hashicorp/azuread",
+      "version": "=2.31.0"
+    }
+  },
+  {
     "repo": "hashicorp-aws",
     "subdir": "4.x",
     "provider": {
