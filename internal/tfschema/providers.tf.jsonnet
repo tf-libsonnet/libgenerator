@@ -12,10 +12,16 @@ function(providers)
     {
       terraform+: {
         required_providers+: {
-          [p.name]: {
-            source: p.src,
-            version: p.version,
-          },
+          [p.name]: (
+            {
+              source: p.src,
+            }
+            + (
+              if p.version != '' then
+                { version: p.version }
+              else {}
+            )
+          ),
         },
       },
     }

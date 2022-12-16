@@ -53,14 +53,14 @@ func parseProvidersInput(cmd *cobra.Command) (tfschema.SchemaRequestList, error)
 		if err != nil {
 			return nil, err
 		}
+
 		src := pinKV.Get("src")
 		if src == "" {
 			return nil, fmt.Errorf("src key is required for --provider")
 		}
+
 		version := pinKV.Get("version")
-		if version == "" {
-			return nil, fmt.Errorf("version key is required for --provider")
-		}
+
 		req, err := tfschema.NewSchemaRequest(src, version)
 		if err != nil {
 			return nil, err
