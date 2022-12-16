@@ -69,11 +69,15 @@ jobs:
           go run ./cmd/libgenerator \
             gen --out "$(pwd)/generator-out" --config "$(pwd)/cfg/managed.json" --loglevel debug
 
+      - name: tar artifact
+        run: |
+          tar -czf generator-out.tar.gz ./generator-out
+
       - name: create artifact
         uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3.1.1
         with:
           name: generator-out
-          path: generator-out/
+          path: generator-out.tar.gz
 
       # Set the contents of cfg/managed.json as a github output so that we can run a matrix job where a GitHub Action
       # job runs for each entry in the config.
@@ -92,7 +96,10 @@ jobs:
         uses: actions/download-artifact@9782bd6a9848b53b110e712e20e42d89988822b7 # v3.0.1
         with:
           name: generator-out
-          path: generator-out
+
+      - name: untar generated code
+        run: |
+          tar -xvf ./generator-out.tar.gz
 
       - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.1.0
         with:

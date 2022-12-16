@@ -45,16 +45,16 @@ func renderResourceOrDataSource(
 	rootFields = append(rootFields, j.Hidden(attrConstructor))
 
 	// Add modifier functions for each attribute
-	for attr, cfg := range getInputAttributes(schema) {
-		bareWithFn, err := withAttributeOrBlockFn(resrcOrDataSrc, typ, attr, false, IsNotCollection)
+	for _, cfg := range getInputAttributes(schema) {
+		bareWithFn, err := withAttributeOrBlockFn(resrcOrDataSrc, typ, cfg.tfName, false, IsNotCollection)
 		if err != nil {
 			return nil, err
 		}
 		rootFields = append(rootFields, j.Hidden(*bareWithFn))
 
-		if cfg.AttributeNestedType != nil {
-			collTyp := getCollectionType(cfg.AttributeNestedType.NestingMode)
-			mixinWithFn, err := withAttributeOrBlockFn(resrcOrDataSrc, typ, attr, true, collTyp)
+		if cfg.attr.AttributeNestedType != nil {
+			collTyp := getCollectionType(cfg.attr.AttributeNestedType.NestingMode)
+			mixinWithFn, err := withAttributeOrBlockFn(resrcOrDataSrc, typ, cfg.tfName, true, collTyp)
 			if err != nil {
 				return nil, err
 			}
@@ -63,21 +63,21 @@ func renderResourceOrDataSource(
 	}
 
 	// Add modifier functions for each block
-	for block, cfg := range schema.NestedBlocks {
+	for block, cfg := range getNestedBlocks(schema) {
 		bareWithFn, err := withAttributeOrBlockFn(resrcOrDataSrc, typ, block, false, IsNotCollection)
 		if err != nil {
 			return nil, err
 		}
 		rootFields = append(rootFields, j.Hidden(*bareWithFn))
 
-		collTyp := getCollectionType(cfg.NestingMode)
-		mixinWithFn, err := withAttributeOrBlockFn(resrcOrDataSrc, typ, block, true, collTyp)
+		collTyp := getCollectionType(cfg.block.NestingMode)
+		mixinWithFn, err := withAttributeOrBlockFn(resrcOrDataSrc, typ, cfg.tfName, true, collTyp)
 		if err != nil {
 			return nil, err
 		}
 		rootFields = append(rootFields, j.Hidden(*mixinWithFn))
 
-		blockObj, err := nestedBlockObject(block, cfg)
+		blockObj, err := nestedBlockObject(cfg)
 		if err != nil {
 			return nil, err
 		}
@@ -98,8 +98,8 @@ func constructor(resrcOrDataSrc resourceOrDataSource, typ string, schema *tfjson
 	for attr, cfg := range getInputAttributes(schema) {
 		// Default all the optional args to null, which is treated the same as omitting it from the arg list.
 		var arg j.Type = j.Null(attr)
-		if cfg.Required {
-			arg = j.Required(j.String(attr, ""))
+		if cfg.attr.Required {
+			arg = j.Required(arg)
 		}
 		args = append(args, arg)
 
@@ -107,7 +107,7 @@ func constructor(resrcOrDataSrc resourceOrDataSource, typ string, schema *tfjson
 	}
 
 	// Add args for the nested blocks
-	for block := range schema.NestedBlocks {
+	for block := range getNestedBlocks(schema) {
 		// Nested blocks can not be labeled as required so always assume optional.
 		args = append(args, j.Null(block))
 		attrCallArgs = append(attrCallArgs, j.Ref(block, block))
@@ -137,19 +137,19 @@ func attrsConstructor(fnName string, schema *tfjson.SchemaBlock) (j.FuncType, er
 
 	// Add args for the attributes
 	for attr, cfg := range getInputAttributes(schema) {
-		fields = append(fields, j.Ref(attr, attr))
+		fields = append(fields, j.Ref(cfg.tfName, attr))
 
 		// Default all the optional args to null, which is treated the same as omitting it from the arg list.
 		var arg j.Type = j.Null(attr)
-		if cfg.Required {
-			arg = j.Required(j.String(attr, ""))
+		if cfg.attr.Required {
+			arg = j.Required(arg)
 		}
 		args = append(args, arg)
 	}
 
 	// Add args for the nested blocks
-	for block := range schema.NestedBlocks {
-		fields = append(fields, j.Ref(block, block))
+	for block, cfg := range getNestedBlocks(schema) {
+		fields = append(fields, j.Ref(cfg.tfName, block))
 
 		// Nested blocks can not be labeled as required so always assume optional.
 		args = append(args, j.Null(block))
@@ -165,7 +165,7 @@ func attrsConstructor(fnName string, schema *tfjson.SchemaBlock) (j.FuncType, er
 
 func withAttributeOrBlockFn(
 	resrcOrDataSrc resourceOrDataSource,
-	typ, attr string,
+	typ, attrTFName string,
 	isMixin bool,
 	collTyp collectionType,
 ) (*j.FuncType, error) {
@@ -178,8 +178,8 @@ func withAttributeOrBlockFn(
 	// The maintainers of the k8s generator library may change this behavior in the future!
 	refMerge := fmt.Sprintf("[%s]", resrcOrDataSrc.labelArg())
 
-	fnName := fmt.Sprintf("with%s", strcase.ToCamel(attr))
-	var attrRef j.Type = j.Ref(attr, valueArgName)
+	fnName := fmt.Sprintf("with%s", strcase.ToCamel(attrTFName))
+	var attrRef j.Type = j.Ref(attrTFName, valueArgName)
 
 	if isMixin {
 		fnName = fnName + "Mixin"
@@ -188,14 +188,14 @@ func withAttributeOrBlockFn(
 			attrRef = j.Merge(attrRef)
 		case IsListOrSet:
 			// For lists or sets, we want to conditionally convert the arg to a list so that it can be appended.
-			conditional := j.IfThenElse(attr,
+			conditional := j.IfThenElse(attrTFName,
 				j.Call("", "std.isArray", []j.Type{j.Ref("v", valueArgName)}),
 				attrRef,
 				j.List("", attrRef),
 			)
 			attrRef = j.Merge(conditional)
 		default:
-			return nil, fmt.Errorf("Mixin function for attribute %s with collection type %s is not supported", attr, collTyp)
+			return nil, fmt.Errorf("Mixin function for attribute %s with collection type %s is not supported", attrTFName, collTyp)
 		}
 	}
 
@@ -215,25 +215,25 @@ func withAttributeOrBlockFn(
 // data source.
 // For now, this is just the constructors. In the future, we may add mixin objects, but these are currently not
 // implemented due to the complexity involved in setting up the merge operators correctly across the nested levels.
-func nestedBlockObject(block string, cfg *tfjson.SchemaBlockType) (j.Type, error) {
-	errRet := j.Null(block)
+func nestedBlockObject(cfg *block) (j.Type, error) {
+	errRet := j.Null(cfg.tfName)
 	objFields := []j.Type{}
 
-	constructor, err := attrsConstructor(constructorFnName, cfg.Block)
+	constructor, err := attrsConstructor(constructorFnName, cfg.block.Block)
 	if err != nil {
 		return errRet, err
 	}
 	objFields = append(objFields, j.Hidden(constructor))
 
 	// Add nested objects for deep nested blocks as well.
-	for nestedBlock, nestedCfg := range cfg.Block.NestedBlocks {
-		deepNestedBlockObj, err := nestedBlockObject(nestedBlock, nestedCfg)
+	for _, nestedCfg := range getNestedBlocks(cfg.block.Block) {
+		deepNestedBlockObj, err := nestedBlockObject(nestedCfg)
 		if err != nil {
 			return errRet, err
 		}
 		objFields = append(objFields, j.Hidden(deepNestedBlockObj))
 	}
 
-	obj := j.Object(block, objFields...)
+	obj := j.Object(cfg.tfName, objFields...)
 	return obj, nil
 }
