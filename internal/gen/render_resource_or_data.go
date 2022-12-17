@@ -24,20 +24,21 @@ import (
 //     block will have its own `new` functions for constructing the nested block object.
 //   - Nested blocks will recursively nest subblocks if the nested blocks have its own nested blocks.
 func renderResourceOrDataSource(
+	providerName, typ string,
 	resrcOrDataSrc resourceOrDataSource,
-	typ string,
 	schema *tfjson.SchemaBlock,
 ) (*j.Doc, error) {
 	locals := []j.LocalType{
 		j.Local(importCore()),
+		j.Local(importDocsonnet()),
 	}
 	rootFields := sortedTypeList{}
 
-	constructor, err := constructor(resrcOrDataSrc, typ, schema)
+	constructor, constructorDocs, err := constructor(providerName, typ, resrcOrDataSrc, schema)
 	if err != nil {
 		return nil, err
 	}
-	rootFields = append(rootFields, j.Hidden(constructor))
+	rootFields = append(rootFields, j.Hidden(*constructorDocs), j.Hidden(*constructor))
 
 	attrConstructor, err := attrsConstructor(newAttrsFnName, schema)
 	if err != nil {
@@ -91,7 +92,26 @@ func renderResourceOrDataSource(
 	return &j.Doc{Locals: locals, Root: rootObj}, nil
 }
 
-func constructor(resrcOrDataSrc resourceOrDataSource, typ string, schema *tfjson.SchemaBlock) (j.FuncType, error) {
+// constructor returns the function implementation to construct a new resource or data source into the root terraform
+// document. This will also return the docsonnet compatible docstring.
+func constructor(
+	providerName, typ string,
+	resrcOrDataSrc resourceOrDataSource,
+	schema *tfjson.SchemaBlock,
+) (*j.FuncType, *j.CallType, error) {
+	docstring, err := constructorDocString(providerName, typ, resrcOrDataSrc, schema)
+	if err != nil {
+		return nil, nil, err
+	}
+	doc := j.Call(
+		"#"+constructorFnName,
+		"d.fn",
+		[]j.Type{
+			j.String("help", docstring),
+			j.List("args"),
+		},
+	)
+
 	params := constructorParamList(schema)
 
 	// Prepend the label param after it has been sorted so that it is always the first function parameter.
@@ -124,7 +144,7 @@ func constructor(resrcOrDataSrc resourceOrDataSource, typ string, schema *tfjson
 		j.Args(params.params...),
 		resource,
 	)
-	return fn, nil
+	return &fn, &doc, nil
 }
 
 func attrsConstructor(fnName string, schema *tfjson.SchemaBlock) (j.FuncType, error) {

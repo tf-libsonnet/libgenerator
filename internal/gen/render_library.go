@@ -53,7 +53,7 @@ func RenderLibrary(
 		)
 
 		doc, err := renderResourceOrDataSource(
-			IsResource, resrcName, resrcSchema.Block,
+			providerName, resrcName, IsResource, resrcSchema.Block,
 		)
 		if err != nil {
 			return err
@@ -78,7 +78,7 @@ func RenderLibrary(
 		)
 
 		doc, err := renderResourceOrDataSource(
-			IsDataSource, datasrcName, datasrcSchema.Block,
+			providerName, datasrcName, IsDataSource, datasrcSchema.Block,
 		)
 		if err != nil {
 			return err

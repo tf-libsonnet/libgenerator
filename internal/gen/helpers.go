@@ -120,7 +120,14 @@ func (a sortedTypeList) Less(x, y int) bool {
 		return false
 	}
 
-	return xTyp.Name() < yTyp.Name()
+	// To ensure the docsonnet attrs are sorted with the functions, we trim the #, but making sure that the # version of
+	// the function will always sort first.
+	xTypName := strings.TrimPrefix(xTyp.Name(), "#")
+	yTypName := strings.TrimPrefix(yTyp.Name(), "#")
+	if xTypName == yTypName {
+		return xTyp.Name() < yTyp.Name()
+	}
+	return xTypName < yTypName
 }
 
 func (a sortedTypeList) Swap(i, j int) {
@@ -194,6 +201,11 @@ func constructorParamList(schema *tfjson.SchemaBlock) paramList {
 // importCore returns the import call for importing the core library.
 func importCore() j.Type {
 	return j.Import("tf", "github.com/tf-libsonnet/core/main.libsonnet")
+}
+
+// improtDocsonnet returns the import call for importing the docsonnet library.
+func importDocsonnet() j.Type {
+	return j.Import("d", "github.com/jsonnet-libs/docsonnet/doc-util/main.libsonnet")
 }
 
 type attribute struct {
