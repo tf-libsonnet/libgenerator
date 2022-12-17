@@ -50,36 +50,44 @@ func renderResourceOrDataSource(
 
 	// Add modifier functions for each attribute
 	for _, cfg := range getInputAttributes(schema) {
-		bareWithFn, err := withAttributeOrBlockFn(resrcOrDataSrc, typ, cfg.tfName, false, IsNotCollection)
+		bareWithFn, bareWithFnDoc, err := withAttributeOrBlockFn(
+			resrcOrDataSrc, providerName, typ, cfg.tfName, false, IsNotCollection,
+		)
 		if err != nil {
 			return nil, err
 		}
-		rootFields = append(rootFields, j.Hidden(*bareWithFn))
+		rootFields = append(rootFields, j.Hidden(*bareWithFn), j.Hidden(*bareWithFnDoc))
 
 		if cfg.attr.AttributeNestedType != nil {
 			collTyp := getCollectionType(cfg.attr.AttributeNestedType.NestingMode)
-			mixinWithFn, err := withAttributeOrBlockFn(resrcOrDataSrc, typ, cfg.tfName, true, collTyp)
+			mixinWithFn, mixinWithFnDoc, err := withAttributeOrBlockFn(
+				resrcOrDataSrc, providerName, typ, cfg.tfName, true, collTyp,
+			)
 			if err != nil {
 				return nil, err
 			}
-			rootFields = append(rootFields, j.Hidden(*mixinWithFn))
+			rootFields = append(rootFields, j.Hidden(*mixinWithFn), j.Hidden(*mixinWithFnDoc))
 		}
 	}
 
 	// Add modifier functions for each block
 	for block, cfg := range getNestedBlocks(schema) {
-		bareWithFn, err := withAttributeOrBlockFn(resrcOrDataSrc, typ, block, false, IsNotCollection)
+		bareWithFn, bareWithFnDoc, err := withAttributeOrBlockFn(
+			resrcOrDataSrc, providerName, typ, block, false, IsNotCollection,
+		)
 		if err != nil {
 			return nil, err
 		}
-		rootFields = append(rootFields, j.Hidden(*bareWithFn))
+		rootFields = append(rootFields, j.Hidden(*bareWithFn), j.Hidden(*bareWithFnDoc))
 
 		collTyp := getCollectionType(cfg.block.NestingMode)
-		mixinWithFn, err := withAttributeOrBlockFn(resrcOrDataSrc, typ, cfg.tfName, true, collTyp)
+		mixinWithFn, mixinWithFnDoc, err := withAttributeOrBlockFn(
+			resrcOrDataSrc, providerName, typ, cfg.tfName, true, collTyp,
+		)
 		if err != nil {
 			return nil, err
 		}
-		rootFields = append(rootFields, j.Hidden(*mixinWithFn))
+		rootFields = append(rootFields, j.Hidden(*mixinWithFn), j.Hidden(*mixinWithFnDoc))
 
 		providerNameForNested := fmt.Sprintf(
 			"%s.%s",
@@ -114,6 +122,7 @@ func constructor(
 		"d.fn",
 		[]j.Type{
 			j.String("help", docstring),
+			// TODO
 			j.List("args"),
 		},
 	)
@@ -160,7 +169,7 @@ func attrsConstructor(
 	resrcOrDataSrc resourceOrDataSource,
 	schema *tfjson.SchemaBlock,
 ) (*j.FuncType, *j.CallType, error) {
-	docstring, err := attrsConstructorDocString(providerName, typ, resrcOrDataSrc, schema)
+	docstring, err := attrsConstructorDocString(providerName, typ, resrcOrDataSrc, fnName, schema)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -169,6 +178,7 @@ func attrsConstructor(
 		"d.fn",
 		[]j.Type{
 			j.String("help", docstring),
+			// TODO
 			j.List("args"),
 		},
 	)
@@ -192,10 +202,10 @@ func attrsConstructor(
 
 func withAttributeOrBlockFn(
 	resrcOrDataSrc resourceOrDataSource,
-	typ, attrTFName string,
+	providerName, typ, attrTFName string,
 	isMixin bool,
 	collTyp collectionType,
-) (*j.FuncType, error) {
+) (*j.FuncType, *j.CallType, error) {
 	valueArgName := "value"
 
 	// NOTE: this is a hack to work around the lack of functionality to introduce a reference key merge in the builder
@@ -222,7 +232,7 @@ func withAttributeOrBlockFn(
 			)
 			attrRef = j.Merge(conditional)
 		default:
-			return nil, fmt.Errorf("Mixin function for attribute %s with collection type %s is not supported", attrTFName, collTyp)
+			return nil, nil, fmt.Errorf("Mixin function for attribute %s with collection type %s is not supported", attrTFName, collTyp)
 		}
 	}
 
@@ -232,10 +242,31 @@ func withAttributeOrBlockFn(
 				j.Merge(j.Object(refMerge,
 					attrRef)))))))
 	fn := j.Func(fnName,
-		j.Args(j.Required(j.String(resrcOrDataSrc.labelArg(), "")), j.Required(j.String(valueArgName, ""))),
+		j.Args(
+			j.Required(j.String(resrcOrDataSrc.labelArg(), "")),
+			j.Required(j.String(valueArgName, "")),
+		),
 		result,
 	)
-	return &fn, nil
+
+	docstring, err := withFnDocString(
+		providerName, nameWithoutProvider(providerName, typ), resrcOrDataSrc,
+		attrTFName, fnName, collTyp,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+	doc := j.Call(
+		"#"+fnName,
+		"d.fn",
+		[]j.Type{
+			j.String("help", docstring),
+			// TODO
+			j.List("args"),
+		},
+	)
+
+	return &fn, &doc, nil
 }
 
 // nestedBlockObject renders the object with functions for constructing and modifying nested blocks on the resource or

@@ -1,5 +1,5 @@
 {{- $fnPrefix := .FnPrefix }}
-`{{ .FnPrefix }}.newAttrs` constructs a new object with attributes and blocks configured for the `{{ .ObjectName }}`
+`{{ .FnPrefix }}.{{ .FnName }}` constructs a new object with attributes and blocks configured for the `{{ .ObjectName }}`
 Terraform {{ .ResourceOrDataSource }}.
 
 {{ if .CoreFnRef }}Unlike [{{ .FnPrefix }}.new]({{ .ConstructorRef }}), this function will not inject the `{{ .ResourceOrDataSource }}`

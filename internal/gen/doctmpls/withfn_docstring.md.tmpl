@@ -1,0 +1,18 @@
+`{{ .FnPrefix }}.{{ .FnName }}` constructs a mixin object that can be merged into the `{{ .ObjectName }}`
+Terraform {{ .ResourceOrDataSource }} block to set or update the {{ .AttrOrBlockName }} field.
+
+{{ if and .IsArray .IsMixin }}This function will append the passed in array or object to the existing array. If you wish
+to instead replace the array with the passed in `value`, use the [{{ .FnPrefix }}.{{ .FnName | trimSuffix "Mixin" }}](TODO)
+function.
+{{ else if .IsArray }}This function will replace the array with the passed in `value`. If you wish to instead append the
+passed in value to the existing array, use the [{{ .FnPrefix }}.{{ .FnName }}Mixin](TODO) function.
+{{ else if and .IsMap .IsMixin }}This function will merge the passed in value to the existing map. If you wish
+to instead replace the entire map with the passed in `value`, use the [{{ .FnPrefix }}.{{ .FnName | trimSuffix "Mixin" }}](TODO)
+function.
+{{ else if .IsMap }}This function will replace the map with the passed in `value`. If you wish to instead merge the
+passed in value to the existing map, use the [{{ .FnPrefix }}.{{ .FnName }}Mixin](TODO) function.
+{{- end }}
+
+**Args**:
+  - `{{ .LabelParam }}` (`string`): The name label of the block to update.
+  - `value` (`{{ .Typ }}`): The value to set for the `{{ .AttrOrBlockName }}` field.

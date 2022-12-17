@@ -18,6 +18,7 @@ NOTE: if you are chaining multiple resources together in a merge operation, you 
 or `$` to refer to the root object. Instead, make an explicit outer object using `local`.
 
 **Args**:
+  - `{{ .LabelParam }}` (`string`): The name label of the block.
 {{- range .Params }}
   - `{{ .Name }}` (`{{ .Typ }}`): {{ .Description }}
   {{- if .IsOptional }} When `null`, the `{{ .Name }}` {{ if .IsBlock }}sub block{{ else }}field{{ end }} will be omitted from the resulting object.{{ end }}

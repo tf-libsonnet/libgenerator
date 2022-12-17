@@ -9,6 +9,7 @@ import (
 
 	_ "embed"
 
+	"github.com/Masterminds/sprig/v3"
 	tfjson "github.com/hashicorp/terraform-json"
 	"github.com/iancoleman/strcase"
 	"github.com/zclconf/go-cty/cty"
@@ -18,13 +19,19 @@ var (
 	//go:embed doctmpls/constructor_docstring.md.tmpl
 	constructorDocStringTmplContents string
 	constructorDocStringTmpl         = template.Must(
-		template.New("docstring").Parse(constructorDocStringTmplContents),
+		template.New("docstring").Funcs(sprig.FuncMap()).Parse(constructorDocStringTmplContents),
 	)
 
 	//go:embed doctmpls/newattrs_docstring.md.tmpl
 	attrsConstructorDocStringTmplContents string
 	attrsConstructorDocStringTmpl         = template.Must(
-		template.New("docstring").Parse(attrsConstructorDocStringTmplContents),
+		template.New("docstring").Funcs(sprig.FuncMap()).Parse(attrsConstructorDocStringTmplContents),
+	)
+
+	//go:embed doctmpls/withfn_docstring.md.tmpl
+	withFnDocStringTmplContents string
+	withFnDocStringTmpl         = template.Must(
+		template.New("docstring").Funcs(sprig.FuncMap()).Parse(withFnDocStringTmplContents),
 	)
 )
 
@@ -33,8 +40,10 @@ type docStringData struct {
 	ObjectName   string
 
 	ResourceOrDataSource string
+	LabelParam           string
 	CoreFnRef            string
 
+	FnName    string
 	FnPrefix  string
 	RefPrefix string
 	Params    []docStringParam
@@ -52,12 +61,28 @@ type docStringParam struct {
 	ParamConstructorRef string // only set on blocks
 }
 
+type withFnDocStringData struct {
+	AttrOrBlockName string
+	ObjectName      string
+	Typ             string
+
+	FnPrefix string
+	FnName   string
+
+	ResourceOrDataSource string
+	LabelParam           string
+
+	IsArray bool
+	IsMap   bool
+	IsMixin bool
+}
+
 func constructorDocString(
 	providerName, typ string,
 	resrcOrDataSrc resourceOrDataSource,
 	schema *tfjson.SchemaBlock,
 ) (string, error) {
-	data := getDocStringData(providerName, typ, resrcOrDataSrc, schema)
+	data := getConstructorDocStringData(providerName, typ, resrcOrDataSrc, constructorFnName, schema)
 
 	var out bytes.Buffer
 	err := constructorDocStringTmpl.Execute(&out, data)
@@ -67,18 +92,38 @@ func constructorDocString(
 func attrsConstructorDocString(
 	providerName, typ string,
 	resrcOrDataSrc resourceOrDataSource,
+	fnName string,
 	schema *tfjson.SchemaBlock,
 ) (string, error) {
-	data := getDocStringData(providerName, typ, resrcOrDataSrc, schema)
+	data := getConstructorDocStringData(providerName, typ, resrcOrDataSrc, fnName, schema)
 
 	var out bytes.Buffer
 	err := attrsConstructorDocStringTmpl.Execute(&out, data)
 	return out.String(), err
 }
 
-func getDocStringData(
+// TODO: consolidate params list
+func withFnDocString(
+	providerName, objectName string,
+	resrcOrDataSrc resourceOrDataSource,
+	attrOrBlockName string,
+	fnName string,
+	collTyp collectionType,
+) (string, error) {
+	data := getWithFnDocStringData(
+		providerName, objectName, resrcOrDataSrc, attrOrBlockName, fnName,
+		collTyp == IsListOrSet, collTyp == IsMap,
+	)
+
+	var out bytes.Buffer
+	err := withFnDocStringTmpl.Execute(&out, data)
+	return out.String(), err
+}
+
+func getConstructorDocStringData(
 	providerName, typ string,
 	resrcOrDataSrc resourceOrDataSource,
+	fnName string,
 	schema *tfjson.SchemaBlock,
 ) docStringData {
 	objectName := nameWithoutProvider(providerName, typ)
@@ -87,6 +132,8 @@ func getDocStringData(
 		ProviderName:         providerName,
 		ObjectName:           objectName,
 		ResourceOrDataSource: resrcOrDataSrc.String(),
+		LabelParam:           resrcOrDataSrc.labelArg(),
+		FnName:               fnName,
 		CoreFnRef:            getCoreFnRef(resrcOrDataSrc),
 		FnPrefix:             fmt.Sprintf("%s.%s", providerName, objectName),
 		RefPrefix:            fmt.Sprintf("%s_%s", providerName, objectName),
@@ -136,6 +183,33 @@ func getDocStringData(
 				strings.ToLower(strcase.ToCamel(block)),
 			),
 		})
+	}
+	return data
+}
+
+func getWithFnDocStringData(
+	providerName, objectName string,
+	resrcOrDataSrc resourceOrDataSource,
+	attrOrBlockName string,
+	fnName string,
+	isArray, isMap bool,
+) withFnDocStringData {
+	isMixin := strings.HasSuffix(fnName, "Mixin")
+
+	data := withFnDocStringData{
+		AttrOrBlockName: attrOrBlockName,
+		ObjectName:      objectName,
+		Typ:             "TODO",
+		FnPrefix: fmt.Sprintf(
+			"%s.%s",
+			providerName, objectName,
+		),
+		ResourceOrDataSource: resrcOrDataSrc.String(),
+		LabelParam:           resrcOrDataSrc.labelArg(),
+		FnName:               fnName,
+		IsArray:              isArray,
+		IsMap:                isMap,
+		IsMixin:              isMixin,
 	}
 	return data
 }
