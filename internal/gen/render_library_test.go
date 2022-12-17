@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/hashicorp/terraform-exec/tfexec"
 	. "github.com/onsi/gomega"
 
 	"github.com/google/go-jsonnet"
+	"github.com/hashicorp/terraform-exec/tfexec"
 
 	"github.com/tf-libsonnet/libgenerator/internal/logging"
 )

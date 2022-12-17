@@ -67,6 +67,20 @@ const (
 	unknown                  = "__UNKNOWN__"
 )
 
+func (resrcOrDataSrc resourceOrDataSource) String() string {
+	switch resrcOrDataSrc {
+	case IsResource:
+		return "resource"
+	case IsDataSource:
+		return "data source"
+	case IsProvider:
+		return "provider"
+	case IsNestedBlock:
+		return "sub block"
+	}
+	return unknown
+}
+
 func (resrcOrDataSrc resourceOrDataSource) labelArg() string {
 	switch resrcOrDataSrc {
 	case IsResource:

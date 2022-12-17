@@ -1,0 +1,28 @@
+{{- $fnPrefix := .FnPrefix }}
+`{{ .FnPrefix }}.new` injects a new `{{ .RefPrefix }}` Terraform `{{ .ResourceOrDataSource }}`
+block into the root module document.
+
+Additionally, this inserts a private function into the `_ref` attribute that generates references to attributes of the
+resource. For example, if you added a new instance to the root using:
+
+    # arguments omitted for brevity
+    {{ .FnPrefix }}.new('some_id')
+
+You can get the reference to the `id` field of the created `{{ .FnPrefix }}` using the reference:
+
+    $._ref.{{ .RefPrefix }}.some_id.get('id')
+
+This is the same as directly entering `"${ {{ .RefPrefix }}.some_id.id }"` as the value.
+
+NOTE: if you are chaining multiple resources together in a merge operation, you may not be able to use `super`, `self`,
+or `$` to refer to the root object. Instead, make an explicit outer object using `local`.
+
+**Args**:
+{{- range .Params }}
+  - `{{ .Name }}` (`{{ .Typ }}`): {{ .Description }}
+  {{- if .IsOptional }} When `null`, the `{{ .Name }}` {{ if .IsBlock }}sub block{{ else }}field{{ end }} will be omitted from the resulting object.{{ end }}
+    {{- if .IsBlock }} When setting the sub block, it is recommended to construct the object using the [{{ $fnPrefix }}.{{ .Name }}.new]({{ .ConstructorRef }}) constructor.{{ end }}
+{{- end }}
+
+**Returns**:
+- A mixin object that injects the new {{ .ResourceOrDataSource }} into the root Terraform configuration.
