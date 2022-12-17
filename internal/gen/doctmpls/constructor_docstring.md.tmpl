@@ -21,7 +21,7 @@ or `$` to refer to the root object. Instead, make an explicit outer object using
 {{- range .Params }}
   - `{{ .Name }}` (`{{ .Typ }}`): {{ .Description }}
   {{- if .IsOptional }} When `null`, the `{{ .Name }}` {{ if .IsBlock }}sub block{{ else }}field{{ end }} will be omitted from the resulting object.{{ end }}
-    {{- if .IsBlock }} When setting the sub block, it is recommended to construct the object using the [{{ $fnPrefix }}.{{ .Name }}.new]({{ .ConstructorRef }}) constructor.{{ end }}
+    {{- if .IsBlock }} When setting the sub block, it is recommended to construct the object using the [{{ $fnPrefix }}.{{ .Name }}.new]({{ .ParamConstructorRef }}) constructor.{{ end }}
 {{- end }}
 
 **Returns**:

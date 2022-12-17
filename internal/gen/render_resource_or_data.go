@@ -40,11 +40,13 @@ func renderResourceOrDataSource(
 	}
 	rootFields = append(rootFields, j.Hidden(*constructorDocs), j.Hidden(*constructor))
 
-	attrConstructor, err := attrsConstructor(newAttrsFnName, schema)
+	attrConstructor, attrConstructorDocs, err := attrsConstructor(
+		newAttrsFnName, providerName, typ, resrcOrDataSrc, schema,
+	)
 	if err != nil {
 		return nil, err
 	}
-	rootFields = append(rootFields, j.Hidden(attrConstructor))
+	rootFields = append(rootFields, j.Hidden(*attrConstructor), j.Hidden(*attrConstructorDocs))
 
 	// Add modifier functions for each attribute
 	for _, cfg := range getInputAttributes(schema) {
@@ -79,7 +81,11 @@ func renderResourceOrDataSource(
 		}
 		rootFields = append(rootFields, j.Hidden(*mixinWithFn))
 
-		blockObj, err := nestedBlockObject(cfg)
+		providerNameForNested := fmt.Sprintf(
+			"%s.%s",
+			providerName, nameWithoutProvider(providerName, typ),
+		)
+		blockObj, err := nestedBlockObject(providerNameForNested, cfg)
 		if err != nil {
 			return nil, err
 		}
@@ -147,7 +153,26 @@ func constructor(
 	return &fn, &doc, nil
 }
 
-func attrsConstructor(fnName string, schema *tfjson.SchemaBlock) (j.FuncType, error) {
+// attrsConstructor returns the function implementation to construct a new mixin object to set attributes on a resource
+// or data source in the root terraform document. This will also return the docsonnet compatible docstring.
+func attrsConstructor(
+	fnName, providerName, typ string,
+	resrcOrDataSrc resourceOrDataSource,
+	schema *tfjson.SchemaBlock,
+) (*j.FuncType, *j.CallType, error) {
+	docstring, err := attrsConstructorDocString(providerName, typ, resrcOrDataSrc, schema)
+	if err != nil {
+		return nil, nil, err
+	}
+	doc := j.Call(
+		"#"+fnName,
+		"d.fn",
+		[]j.Type{
+			j.String("help", docstring),
+			j.List("args"),
+		},
+	)
+
 	params := constructorParamList(schema)
 
 	// Prune null attributes so they are omitted from the final json.
@@ -162,7 +187,7 @@ func attrsConstructor(fnName string, schema *tfjson.SchemaBlock) (j.FuncType, er
 			[]j.Type{j.Object("a", params.tfFieldSetters...)},
 		),
 	)
-	return fn, nil
+	return &fn, &doc, nil
 }
 
 func withAttributeOrBlockFn(
@@ -217,19 +242,22 @@ func withAttributeOrBlockFn(
 // data source.
 // For now, this is just the constructors. In the future, we may add mixin objects, but these are currently not
 // implemented due to the complexity involved in setting up the merge operators correctly across the nested levels.
-func nestedBlockObject(cfg *block) (j.Type, error) {
+func nestedBlockObject(providerName string, cfg *block) (j.Type, error) {
 	errRet := j.Null(cfg.tfName)
 	objFields := sortedTypeList{}
 
-	constructor, err := attrsConstructor(constructorFnName, cfg.block.Block)
+	constructor, constructorDocs, err := attrsConstructor(
+		constructorFnName, providerName, cfg.tfName, IsNestedBlock, cfg.block.Block,
+	)
 	if err != nil {
 		return errRet, err
 	}
-	objFields = append(objFields, j.Hidden(constructor))
+	objFields = append(objFields, j.Hidden(*constructor), j.Hidden(*constructorDocs))
 
 	// Add nested objects for deep nested blocks as well.
 	for _, nestedCfg := range getNestedBlocks(cfg.block.Block) {
-		deepNestedBlockObj, err := nestedBlockObject(nestedCfg)
+		providerNameForNested := fmt.Sprintf("%s.%s", providerName, cfg.tfName)
+		deepNestedBlockObj, err := nestedBlockObject(providerNameForNested, nestedCfg)
 		if err != nil {
 			return errRet, err
 		}

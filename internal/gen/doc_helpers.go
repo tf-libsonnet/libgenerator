@@ -15,19 +15,31 @@ import (
 )
 
 var (
-	//go:embed constructor_docstring.md.tmpl
-	docStringTmplContents string
+	//go:embed doctmpls/constructor_docstring.md.tmpl
+	constructorDocStringTmplContents string
+	constructorDocStringTmpl         = template.Must(
+		template.New("docstring").Parse(constructorDocStringTmplContents),
+	)
 
-	docStringTmpl = template.Must(template.New("docstring").Parse(docStringTmplContents))
+	//go:embed doctmpls/newattrs_docstring.md.tmpl
+	attrsConstructorDocStringTmplContents string
+	attrsConstructorDocStringTmpl         = template.Must(
+		template.New("docstring").Parse(attrsConstructorDocStringTmplContents),
+	)
 )
 
 type docStringData struct {
-	ProviderName         string
-	ObjectName           string
+	ProviderName string
+	ObjectName   string
+
 	ResourceOrDataSource string
-	FnPrefix             string
-	RefPrefix            string
-	Params               []docStringParam
+	CoreFnRef            string
+
+	FnPrefix  string
+	RefPrefix string
+	Params    []docStringParam
+
+	ConstructorRef string
 }
 
 type docStringParam struct {
@@ -37,7 +49,7 @@ type docStringParam struct {
 	IsOptional  bool
 	IsBlock     bool
 
-	ConstructorRef string // only set on blocks
+	ParamConstructorRef string // only set on blocks
 }
 
 func constructorDocString(
@@ -45,14 +57,43 @@ func constructorDocString(
 	resrcOrDataSrc resourceOrDataSource,
 	schema *tfjson.SchemaBlock,
 ) (string, error) {
+	data := getDocStringData(providerName, typ, resrcOrDataSrc, schema)
+
+	var out bytes.Buffer
+	err := constructorDocStringTmpl.Execute(&out, data)
+	return out.String(), err
+}
+
+func attrsConstructorDocString(
+	providerName, typ string,
+	resrcOrDataSrc resourceOrDataSource,
+	schema *tfjson.SchemaBlock,
+) (string, error) {
+	data := getDocStringData(providerName, typ, resrcOrDataSrc, schema)
+
+	var out bytes.Buffer
+	err := attrsConstructorDocStringTmpl.Execute(&out, data)
+	return out.String(), err
+}
+
+func getDocStringData(
+	providerName, typ string,
+	resrcOrDataSrc resourceOrDataSource,
+	schema *tfjson.SchemaBlock,
+) docStringData {
 	objectName := nameWithoutProvider(providerName, typ)
 
 	data := docStringData{
 		ProviderName:         providerName,
 		ObjectName:           objectName,
 		ResourceOrDataSource: resrcOrDataSrc.String(),
+		CoreFnRef:            getCoreFnRef(resrcOrDataSrc),
 		FnPrefix:             fmt.Sprintf("%s.%s", providerName, objectName),
 		RefPrefix:            fmt.Sprintf("%s_%s", providerName, objectName),
+		ConstructorRef: fmt.Sprintf(
+			"#fn-%snew",
+			strings.ToLower(strcase.ToCamel(objectName)),
+		),
 	}
 	if resrcOrDataSrc == IsDataSource {
 		data.FnPrefix = fmt.Sprintf("%s.data.%s", providerName, objectName)
@@ -89,17 +130,14 @@ func constructorDocString(
 			Typ:         getBlockType(cfg.block.NestingMode),
 			IsOptional:  true,
 			IsBlock:     true,
-			ConstructorRef: fmt.Sprintf(
+			ParamConstructorRef: fmt.Sprintf(
 				"#fn-%s%snew",
 				strings.ToLower(strcase.ToCamel(objectName)),
 				strings.ToLower(strcase.ToCamel(block)),
 			),
 		})
 	}
-
-	var out bytes.Buffer
-	err := docStringTmpl.Execute(&out, data)
-	return out.String(), err
+	return data
 }
 
 func getAttrType(attr *tfjson.SchemaAttribute) string {
@@ -120,6 +158,18 @@ func getAttrType(attr *tfjson.SchemaAttribute) string {
 		return "bool"
 	}
 	return "any"
+}
+
+func getCoreFnRef(resrcOrDataSrc resourceOrDataSource) string {
+	switch resrcOrDataSrc {
+	case IsResource:
+		return "[tf.withResource](https://github.com/tf-libsonnet/core/tree/main/docs#fn-withresource)"
+	case IsDataSource:
+		return "[tf.withData](https://github.com/tf-libsonnet/core/tree/main/docs#fn-withdata)"
+	case IsProvider:
+		return "[tf.withProvider](https://github.com/tf-libsonnet/core/tree/main/docs#fn-withprovider)"
+	}
+	return ""
 }
 
 func getBlockType(nestingMode tfjson.SchemaNestingMode) string {

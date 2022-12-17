@@ -13,6 +13,7 @@ import (
 func renderProvider(name string, schema *tfjson.SchemaBlock) (*j.Doc, error) {
 	locals := []j.LocalType{
 		j.Local(importCore()),
+		j.Local(importDocsonnet()),
 	}
 	rootFields := sortedTypeList{}
 
@@ -22,16 +23,18 @@ func renderProvider(name string, schema *tfjson.SchemaBlock) (*j.Doc, error) {
 	}
 	rootFields = append(rootFields, j.Hidden(constructor))
 
-	attrsConstructor, err := attrsConstructor(newAttrsFnName, schema)
+	attrsConstructor, attrsConstructorDocs, err := attrsConstructor(
+		newAttrsFnName, "", name, IsProvider, schema,
+	)
 	if err != nil {
 		return nil, err
 	}
-	rootFields = append(rootFields, j.Hidden(attrsConstructor))
+	rootFields = append(rootFields, j.Hidden(*attrsConstructor), j.Hidden(*attrsConstructorDocs))
 
 	// Render constructor for nested blocks
 	nestedFields := sortedTypeList{}
 	for _, cfg := range getNestedBlocks(schema) {
-		blockObj, err := nestedBlockObject(cfg)
+		blockObj, err := nestedBlockObject(name, cfg)
 		if err != nil {
 			return nil, err
 		}
