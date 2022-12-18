@@ -7,6 +7,7 @@ import (
 	tfjson "github.com/hashicorp/terraform-json"
 	"github.com/iancoleman/strcase"
 	j "github.com/jsonnet-libs/k8s/pkg/builder"
+	d "github.com/jsonnet-libs/k8s/pkg/builder/docsonnet"
 )
 
 // renderResourceOrDataSource will render the libsonnet code for constructing a resource or data source definition for
@@ -29,8 +30,8 @@ func renderResourceOrDataSource(
 	schema *tfjson.SchemaBlock,
 ) (*j.Doc, error) {
 	locals := []j.LocalType{
-		j.Local(importCore()),
-		j.Local(importDocsonnet()),
+		importCore(),
+		importDocsonnet(),
 	}
 	rootFields := sortedTypeList{}
 
@@ -38,7 +39,7 @@ func renderResourceOrDataSource(
 	if err != nil {
 		return nil, err
 	}
-	rootFields = append(rootFields, j.Hidden(*constructorDocs), j.Hidden(*constructor))
+	rootFields = append(rootFields, constructorDocs, j.Hidden(*constructor))
 
 	attrConstructor, attrConstructorDocs, err := attrsConstructor(
 		newAttrsFnName, providerName, typ, resrcOrDataSrc, schema,
@@ -46,7 +47,7 @@ func renderResourceOrDataSource(
 	if err != nil {
 		return nil, err
 	}
-	rootFields = append(rootFields, j.Hidden(*attrConstructor), j.Hidden(*attrConstructorDocs))
+	rootFields = append(rootFields, attrConstructorDocs, j.Hidden(*attrConstructor))
 
 	// Add modifier functions for each attribute
 	for _, cfg := range getInputAttributes(schema) {
@@ -112,21 +113,7 @@ func constructor(
 	providerName, typ string,
 	resrcOrDataSrc resourceOrDataSource,
 	schema *tfjson.SchemaBlock,
-) (*j.FuncType, *j.CallType, error) {
-	docstring, err := constructorDocString(providerName, typ, resrcOrDataSrc, schema)
-	if err != nil {
-		return nil, nil, err
-	}
-	doc := j.Call(
-		"#"+constructorFnName,
-		"d.fn",
-		[]j.Type{
-			j.String("help", docstring),
-			// TODO
-			j.List("args"),
-		},
-	)
-
+) (*j.FuncType, j.Type, error) {
 	params := constructorParamList(schema)
 
 	// Prepend the label param after it has been sorted so that it is always the first function parameter.
@@ -154,12 +141,25 @@ func constructor(
 		},
 	)
 
+	// Construct docs
+	docstring, err := constructorDocString(providerName, typ, resrcOrDataSrc, schema)
+	if err != nil {
+		return nil, nil, err
+	}
+	doc := d.Func(
+		constructorFnName,
+		docstring,
+		// TODO: set args
+		nil,
+	)
+
+	// Construct function
 	fn := j.LargeFunc(
 		constructorFnName,
 		j.Args(params.params...),
 		resource,
 	)
-	return &fn, &doc, nil
+	return &fn, doc, nil
 }
 
 // attrsConstructor returns the function implementation to construct a new mixin object to set attributes on a resource
@@ -168,22 +168,20 @@ func attrsConstructor(
 	fnName, providerName, typ string,
 	resrcOrDataSrc resourceOrDataSource,
 	schema *tfjson.SchemaBlock,
-) (*j.FuncType, *j.CallType, error) {
+) (*j.FuncType, j.Type, error) {
+	params := constructorParamList(schema)
+
+	// Construct docs
 	docstring, err := attrsConstructorDocString(providerName, typ, resrcOrDataSrc, fnName, schema)
 	if err != nil {
 		return nil, nil, err
 	}
-	doc := j.Call(
-		"#"+fnName,
-		"d.fn",
-		[]j.Type{
-			j.String("help", docstring),
-			// TODO
-			j.List("args"),
-		},
+	doc := d.Func(
+		fnName,
+		docstring,
+		// TODO: set args
+		nil,
 	)
-
-	params := constructorParamList(schema)
 
 	// Prune null attributes so they are omitted from the final json.
 	// Although this is not strictly necessary to do, it makes the rendered terraform json (NOT jsonnet code!) nice and
@@ -197,7 +195,7 @@ func attrsConstructor(
 			[]j.Type{j.Object("a", params.tfFieldSetters...)},
 		),
 	)
-	return &fn, &doc, nil
+	return &fn, doc, nil
 }
 
 func withAttributeOrBlockFn(
@@ -283,7 +281,7 @@ func nestedBlockObject(providerName string, cfg *block) (j.Type, error) {
 	if err != nil {
 		return errRet, err
 	}
-	objFields = append(objFields, j.Hidden(*constructor), j.Hidden(*constructorDocs))
+	objFields = append(objFields, constructorDocs, j.Hidden(*constructor))
 
 	// Add nested objects for deep nested blocks as well.
 	for _, nestedCfg := range getNestedBlocks(cfg.block.Block) {

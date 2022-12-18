@@ -199,13 +199,13 @@ func constructorParamList(schema *tfjson.SchemaBlock) paramList {
 }
 
 // importCore returns the import call for importing the core library.
-func importCore() j.Type {
-	return j.Import("tf", "github.com/tf-libsonnet/core/main.libsonnet")
+func importCore() j.LocalType {
+	return j.Local(j.Import("tf", "github.com/tf-libsonnet/core/main.libsonnet"))
 }
 
 // improtDocsonnet returns the import call for importing the docsonnet library.
-func importDocsonnet() j.Type {
-	return j.Import("d", "github.com/jsonnet-libs/docsonnet/doc-util/main.libsonnet")
+func importDocsonnet() j.LocalType {
+	return j.Local(j.Import("d", "github.com/jsonnet-libs/docsonnet/doc-util/main.libsonnet"))
 }
 
 type attribute struct {

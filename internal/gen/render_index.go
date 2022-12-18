@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	j "github.com/jsonnet-libs/k8s/pkg/builder"
+	d "github.com/jsonnet-libs/k8s/pkg/builder/docsonnet"
 )
 
 type indexImports struct {
@@ -33,11 +34,11 @@ func renderIndex(idx indexImports) j.Doc {
 	)
 
 	dataFields := sortedTypeList{}
-	for _, d := range idx.dataSources {
-		libsonnet := dataSourceNameToLibsonnetName(idx.providerName, d)
+	for _, data := range idx.dataSources {
+		libsonnet := dataSourceNameToLibsonnetName(idx.providerName, data)
 		dataFields = append(
 			dataFields,
-			j.Import(d, filepath.Join(".", libsonnet)),
+			j.Import(data, filepath.Join(".", libsonnet)),
 		)
 	}
 	sort.Sort(dataFields)
@@ -45,8 +46,14 @@ func renderIndex(idx indexImports) j.Doc {
 	// Data sources are namespaced with the data keyword.
 	fields = append(fields, j.Object("data", dataFields...))
 
+	// Generate pkg docs and prepend to the fields list so that it is the first field.
+	// TODO
+	doc := d.Pkg("foo", "", "")
+	fields = append([]j.Type{doc}, fields...)
+
 	root := j.Object("", fields...)
 	return j.Doc{
-		Root: root,
+		Locals: []j.LocalType{importDocsonnet()},
+		Root:   root,
 	}
 }

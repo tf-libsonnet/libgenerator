@@ -12,8 +12,8 @@ import (
 // functions for the provider is difficult due to providers being a list instead of a map.
 func renderProvider(name string, schema *tfjson.SchemaBlock) (*j.Doc, error) {
 	locals := []j.LocalType{
-		j.Local(importCore()),
-		j.Local(importDocsonnet()),
+		importCore(),
+		importDocsonnet(),
 	}
 	rootFields := sortedTypeList{}
 
@@ -29,7 +29,7 @@ func renderProvider(name string, schema *tfjson.SchemaBlock) (*j.Doc, error) {
 	if err != nil {
 		return nil, err
 	}
-	rootFields = append(rootFields, j.Hidden(*attrsConstructor), j.Hidden(*attrsConstructorDocs))
+	rootFields = append(rootFields, attrsConstructorDocs, j.Hidden(*attrsConstructor))
 
 	// Render constructor for nested blocks
 	nestedFields := sortedTypeList{}
