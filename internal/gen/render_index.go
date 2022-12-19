@@ -22,14 +22,6 @@ type indexImports struct {
 
 func renderIndex(idx indexImports) (j.Doc, error) {
 	fields := sortedTypeList{}
-	for _, r := range idx.resources {
-		libsonnet := nameToLibsonnetName(idx.providerName, r)
-		fields = append(
-			fields,
-			j.Import(r, filepath.Join(".", libResourcesDirName, libsonnet)),
-		)
-	}
-	sort.Sort(fields)
 
 	// Prepend the provider field after the resources are added and sorted so that it is always the first item in the
 	// object.
@@ -53,10 +45,13 @@ func renderIndex(idx indexImports) (j.Doc, error) {
 	doc := d.Pkg(idx.providerName, "", docstr)
 	fields = append([]j.Type{doc}, fields...)
 
+	// Import the resource index, but merged to the root object so that namespace doesn't change.
+	resrcImp := j.Import("resource", filepath.Join(".", libResourcesDirName, "main.libsonnet"))
+
 	root := j.Object("", fields...)
 	return j.Doc{
 		Locals: []j.LocalType{importDocsonnet()},
-		Root:   root,
+		Root:   j.Add("", root, resrcImp),
 	}, nil
 }
 
@@ -72,8 +67,29 @@ func renderDataIndex(idx indexImports) j.Doc {
 	sort.Sort(fields)
 
 	// Generate pkg docs and prepend to the fields list so that it is the first field.
-	// TODO
 	doc := d.Pkg("data", "", "")
+	fields = append([]j.Type{doc}, fields...)
+
+	root := j.Object("", fields...)
+	return j.Doc{
+		Locals: []j.LocalType{importDocsonnet()},
+		Root:   root,
+	}
+}
+
+func renderResourceIndex(idx indexImports) j.Doc {
+	fields := sortedTypeList{}
+	for _, r := range idx.resources {
+		libsonnet := nameToLibsonnetName(idx.providerName, r)
+		fields = append(
+			fields,
+			j.Import(r, filepath.Join(".", libsonnet)),
+		)
+	}
+	sort.Sort(fields)
+
+	// Generate pkg docs and prepend to the fields list so that it is the first field.
+	doc := d.Pkg("resource", "", "")
 	fields = append([]j.Type{doc}, fields...)
 
 	root := j.Object("", fields...)
