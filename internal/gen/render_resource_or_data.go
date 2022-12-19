@@ -276,6 +276,9 @@ func nestedBlockObject(providerName string, cfg *block) (j.Type, error) {
 	constructorDocs, err := attrsConstructorDocs(
 		providerName, cfg.tfName, IsNestedBlock, constructorFnName, cfg.block.Block,
 	)
+	if err != nil {
+		return errRet, err
+	}
 	constructor, err := attrsConstructor(
 		constructorFnName, providerName, cfg.tfName, IsNestedBlock, cfg.block.Block,
 	)
