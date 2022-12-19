@@ -281,6 +281,8 @@ func withAttributeOrBlockFn(
 // data source.
 // For now, this is just the constructors. In the future, we may add mixin objects, but these are currently not
 // implemented due to the complexity involved in setting up the merge operators correctly across the nested levels.
+// nestedName tracks the number of nesting that has occurred, and is used for constructing the relative links in
+// the docsonnet docs. This should represent the level at the current object, and should include the nested block name.
 func nestedBlockObject(providerName, nestedName string, cfg *block) (j.Type, error) {
 	errRet := j.Null(cfg.tfName)
 	objFields := sortedTypeList{}
