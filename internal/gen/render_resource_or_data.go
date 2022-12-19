@@ -129,11 +129,12 @@ func renderResourceOrDataSource(
 		}
 		rootFields = append(rootFields, *mixinWithFn, j.Hidden(*mixinWithFnDoc))
 
+		objectName := nameWithoutProvider(providerName, typ)
 		providerNameForNested := fmt.Sprintf(
 			"%s.%s",
-			providerName, nameWithoutProvider(providerName, typ),
+			providerName, objectName,
 		)
-		blockObj, err := nestedBlockObject(providerNameForNested, "", cfg)
+		blockObj, err := nestedBlockObject(providerNameForNested, objectName, cfg)
 		if err != nil {
 			return nil, err
 		}
