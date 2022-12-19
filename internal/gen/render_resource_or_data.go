@@ -134,7 +134,7 @@ func renderResourceOrDataSource(
 			"%s.%s",
 			providerName, objectName,
 		)
-		blockObj, err := nestedBlockObject(providerNameForNested, objectName, cfg)
+		blockObj, err := nestedBlockObject(providerNameForNested, cfg.tfName, cfg)
 		if err != nil {
 			return nil, err
 		}
