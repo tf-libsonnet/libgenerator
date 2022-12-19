@@ -1,0 +1,25 @@
+{{- $fnPrefix := .FnPrefix }}
+`{{ .FnPrefix }}.new` injects a new `{{ .ProviderName }}` Terraform `provider`
+block into the root module document.
+
+Optionally, this inserts the provider into the
+[required_providers](https://developer.hashicorp.com/terraform/language/providers/requirements) `terraform` sub block if
+the `src` and/or `version` parameters are set.
+
+**Args**:
+{{- range .Params }}
+  - `{{ .Name }}` (`{{ .Typ }}`): {{ .Description }}
+  {{- if .IsOptional }} When `null`, the `{{ .Name }}` {{ if .IsBlock }}sub block{{ else }}field{{ end }} will be omitted from the resulting object.{{ end }}
+    {{- if .IsBlock }} When setting the sub block, it is recommended to construct the object using the [{{ $fnPrefix }}.{{ .Name }}.new]({{ .ParamConstructorRef }}) constructor.{{ end }}
+{{- end }}
+  - `alias` (`string`): The provider `alias` to set for this instance of the provider block. When `null`, the `alias`
+  field will be omitted from the resulting provider block.
+  - `src` (`string`): The provider `source` to set on the resulting `required_providers` block. If `src` or `version` is
+  set and is not `null`, a `required_providers` block and entry for the provider will be injected into the document.
+  - `version` (`string`): The provider `version` to set on the resulting `required_providers` block. If `src` or
+  `version` is set and is not `null`, a `required_providers` block and entry for the provider will be injected into the
+  document.
+
+
+**Returns**:
+- A mixin object that injects the new provider (and optionally, `required_providers` block) into the root Terraform configuration.

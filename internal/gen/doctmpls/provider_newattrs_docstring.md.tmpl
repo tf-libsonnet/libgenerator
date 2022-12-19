@@ -1,14 +1,13 @@
 {{- $fnPrefix := .FnPrefix }}
-`{{ .FnPrefix }}.{{ .FnName }}` constructs a new object with attributes and blocks configured for the `{{ .ObjectName }}`
-Terraform {{ .ResourceOrDataSource }}.
+`{{ .FnPrefix }}.{{ .FnName }}` constructs a new object with attributes and blocks configured for the `{{ .ProviderName }}`
+Terraform `provider`.
 
-{{ if .CoreFnRef }}Unlike [{{ .FnPrefix }}.new]({{ .ConstructorRef }}), this function will not inject the `{{ .ResourceOrDataSource }}`
+Unlike [{{ .FnPrefix }}.new]({{ .ConstructorRef }}), this function will not inject the `provider`
 block into the root Terraform document. Instead, this must be passed in as the `attrs` argument for the
 {{ .CoreFnRef }} function to build a complete block.
 
 This is most useful when you need to preprocess the attributes with functions, conditional, or looping logic prior to
 injecting into a complete block.
-{{- end }}
 
 {{- if gt (len .Params) 0 }}
 
@@ -21,8 +20,5 @@ injecting into a complete block.
 {{- end }}
 
 **Returns**:
-{{- if .CoreFnRef }}
-  - An attribute object that can be used with {{ .CoreFnRef }} to construct a new `{{ .ObjectName }}` {{ .ResourceOrDataSource }} into the root Terraform configuration.
-{{- else }}
-  - An attribute object that represents the `{{ .ObjectName }}` {{ .ResourceOrDataSource }}.
-{{- end }}
+  - An attribute object that can be used with {{ .CoreFnRef }} to construct a new `{{ .ProviderName }}` provider
+  configuration into the root Terraform configuration.
