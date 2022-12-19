@@ -12,28 +12,9 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	tfjson "github.com/hashicorp/terraform-json"
 	"github.com/iancoleman/strcase"
-	"github.com/zclconf/go-cty/cty"
 )
 
 var (
-	//go:embed doctmpls/root_docstring.md.tmpl
-	rootDocStringTmplContents string
-	rootDocStringTmpl         = template.Must(
-		template.New("docstring").Funcs(sprig.FuncMap()).Parse(rootDocStringTmplContents),
-	)
-
-	//go:embed doctmpls/provider_docstring.md.tmpl
-	providerDocStringTmplContents string
-	providerDocStringTmpl         = template.Must(
-		template.New("docstring").Funcs(sprig.FuncMap()).Parse(providerDocStringTmplContents),
-	)
-
-	//go:embed doctmpls/object_docstring.md.tmpl
-	objectDocStringTmplContents string
-	objectDocStringTmpl         = template.Must(
-		template.New("docstring").Funcs(sprig.FuncMap()).Parse(objectDocStringTmplContents),
-	)
-
 	//go:embed doctmpls/constructor_docstring.md.tmpl
 	constructorDocStringTmplContents string
 	constructorDocStringTmpl         = template.Must(
@@ -53,24 +34,7 @@ var (
 	)
 )
 
-type rootDocStringData struct {
-	ProviderName   string
-	ProviderDocURL string
-}
-
-type providerDocStringData struct {
-	ProviderName string
-	Description  string
-}
-
-type objectDocStringData struct {
-	ProviderName         string
-	ObjectName           string
-	Description          string
-	ResourceOrDataSource string
-}
-
-type docStringData struct {
+type constructorDocStringData struct {
 	ProviderName string
 	ObjectName   string
 
@@ -81,12 +45,12 @@ type docStringData struct {
 	FnName    string
 	FnPrefix  string
 	RefPrefix string
-	Params    []docStringParam
+	Params    []constructorDocStringParam
 
 	ConstructorRef string
 }
 
-type docStringParam struct {
+type constructorDocStringParam struct {
 	Name        string
 	Description string
 	Typ         string
@@ -110,49 +74,6 @@ type withFnDocStringData struct {
 	IsArray bool
 	IsMap   bool
 	IsMixin bool
-}
-
-func rootDocString(
-	providerName, providerDocURL string,
-) (string, error) {
-	data := rootDocStringData{
-		ProviderName:   providerName,
-		ProviderDocURL: providerDocURL,
-	}
-
-	var out bytes.Buffer
-	err := rootDocStringTmpl.Execute(&out, data)
-	return out.String(), err
-}
-
-func providerDocString(
-	providerName, description string,
-) (string, error) {
-	data := providerDocStringData{
-		ProviderName: providerName,
-		Description:  description,
-	}
-
-	var out bytes.Buffer
-	err := providerDocStringTmpl.Execute(&out, data)
-	return out.String(), err
-}
-
-func objectDocString(
-	providerName, typ string,
-	resrcOrDataSrc resourceOrDataSource,
-	schema *tfjson.SchemaBlock,
-) (string, error) {
-	data := objectDocStringData{
-		ProviderName:         providerName,
-		ObjectName:           nameWithoutProvider(providerName, typ),
-		ResourceOrDataSource: resrcOrDataSrc.String(),
-		Description:          schema.Description,
-	}
-
-	var out bytes.Buffer
-	err := objectDocStringTmpl.Execute(&out, data)
-	return out.String(), err
 }
 
 func constructorDocString(
@@ -203,10 +124,10 @@ func getConstructorDocStringData(
 	resrcOrDataSrc resourceOrDataSource,
 	fnName string,
 	schema *tfjson.SchemaBlock,
-) docStringData {
+) constructorDocStringData {
 	objectName := nameWithoutProvider(providerName, typ)
 
-	data := docStringData{
+	data := constructorDocStringData{
 		ProviderName:         providerName,
 		ObjectName:           objectName,
 		ResourceOrDataSource: resrcOrDataSrc.String(),
@@ -233,7 +154,7 @@ func getConstructorDocStringData(
 	sort.Strings(attrs)
 	for _, attr := range attrs {
 		cfg := attrMap[attr]
-		data.Params = append(data.Params, docStringParam{
+		data.Params = append(data.Params, constructorDocStringParam{
 			Name:        attr,
 			Description: cfg.attr.Description,
 			Typ:         getAttrType(cfg.attr),
@@ -249,7 +170,7 @@ func getConstructorDocStringData(
 	sort.Strings(blocks)
 	for _, block := range blocks {
 		cfg := blockMap[block]
-		data.Params = append(data.Params, docStringParam{
+		data.Params = append(data.Params, constructorDocStringParam{
 			Name:        block,
 			Description: cfg.block.Block.Description,
 			Typ:         getBlockType(cfg.block.NestingMode),
@@ -290,46 +211,4 @@ func getWithFnDocStringData(
 		IsMixin:              isMixin,
 	}
 	return data
-}
-
-func getAttrType(attr *tfjson.SchemaAttribute) string {
-	if attr.AttributeNestedType != nil {
-		return getBlockType(attr.AttributeNestedType.NestingMode)
-	}
-
-	switch {
-	case attr.AttributeType.IsObjectType(), attr.AttributeType.IsMapType():
-		return "obj"
-	case attr.AttributeType.IsCollectionType():
-		return "list"
-	case attr.AttributeType == cty.Number:
-		return "number"
-	case attr.AttributeType == cty.String:
-		return "string"
-	case attr.AttributeType == cty.Bool:
-		return "bool"
-	}
-	return "any"
-}
-
-func getCoreFnRef(resrcOrDataSrc resourceOrDataSource) string {
-	switch resrcOrDataSrc {
-	case IsResource:
-		return "[tf.withResource](https://github.com/tf-libsonnet/core/tree/main/docs#fn-withresource)"
-	case IsDataSource:
-		return "[tf.withData](https://github.com/tf-libsonnet/core/tree/main/docs#fn-withdata)"
-	case IsProvider:
-		return "[tf.withProvider](https://github.com/tf-libsonnet/core/tree/main/docs#fn-withprovider)"
-	}
-	return ""
-}
-
-func getBlockType(nestingMode tfjson.SchemaNestingMode) string {
-	switch nestingMode {
-	case tfjson.SchemaNestingModeList, tfjson.SchemaNestingModeSet:
-		return "list[obj]"
-	case tfjson.SchemaNestingModeMap:
-		return "map[str, obj]"
-	}
-	return "obj"
 }
