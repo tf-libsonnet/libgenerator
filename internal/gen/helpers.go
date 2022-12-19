@@ -67,6 +67,20 @@ const (
 	unknown                  = "__UNKNOWN__"
 )
 
+func (resrcOrDataSrc resourceOrDataSource) String() string {
+	switch resrcOrDataSrc {
+	case IsResource:
+		return "resource"
+	case IsDataSource:
+		return "data source"
+	case IsProvider:
+		return "provider"
+	case IsNestedBlock:
+		return "sub block"
+	}
+	return unknown
+}
+
 func (resrcOrDataSrc resourceOrDataSource) labelArg() string {
 	switch resrcOrDataSrc {
 	case IsResource:
@@ -106,7 +120,14 @@ func (a sortedTypeList) Less(x, y int) bool {
 		return false
 	}
 
-	return xTyp.Name() < yTyp.Name()
+	// To ensure the docsonnet attrs are sorted with the functions, we trim the #, but making sure that the # version of
+	// the function will always sort first.
+	xTypName := strings.TrimPrefix(xTyp.Name(), "#")
+	yTypName := strings.TrimPrefix(yTyp.Name(), "#")
+	if xTypName == yTypName {
+		return xTyp.Name() < yTyp.Name()
+	}
+	return xTypName < yTypName
 }
 
 func (a sortedTypeList) Swap(i, j int) {
@@ -178,8 +199,13 @@ func constructorParamList(schema *tfjson.SchemaBlock) paramList {
 }
 
 // importCore returns the import call for importing the core library.
-func importCore() j.Type {
-	return j.Import("tf", "github.com/tf-libsonnet/core/main.libsonnet")
+func importCore() j.LocalType {
+	return j.Local(j.Import("tf", "github.com/tf-libsonnet/core/main.libsonnet"))
+}
+
+// improtDocsonnet returns the import call for importing the docsonnet library.
+func importDocsonnet() j.LocalType {
+	return j.Local(j.Import("d", "github.com/jsonnet-libs/docsonnet/doc-util/main.libsonnet"))
 }
 
 type attribute struct {
@@ -265,30 +291,15 @@ func providerNameToLibsonnetName(name string) string {
 	return fmt.Sprintf("provider_%s.libsonnet", name)
 }
 
-// resourceNameToLibsonnetName returns the libsonnet filename given a resource
-// name. This expects a name of the form PROVIDER_RESOURCE, and returns
-// the name as resource_RESOURCE.libsonnet.
-// If the name already omits the provider, then provider must be set as empty
-// string.
-func resourceNameToLibsonnetName(provider, name string) string {
+// nameToLibsonnetName returns the libsonnet filename given a resource or data source name. This expects a name of the
+// form PROVIDER_RESOURCE, and returns the name as RESOURCE.libsonnet. If the name already omits the provider, then
+// provider must be set as empty string.
+func nameToLibsonnetName(provider, name string) string {
 	nameWOProvider := name
 	if provider != "" {
 		nameWOProvider = nameWithoutProvider(provider, name)
 	}
-	return fmt.Sprintf("resource_%s.libsonnet", nameWOProvider)
-}
-
-// dataSourceNameToLibsonnetName returns the libsonnet filename given a data
-// source name. This expects a name of the form PROVIDER_DATASRC, and returns
-// the name as data_DATASRC.libsonnet.
-// If the name already omits the provider, then provider must be set as empty
-// string.
-func dataSourceNameToLibsonnetName(provider, name string) string {
-	nameWOProvider := name
-	if provider != "" {
-		nameWOProvider = nameWithoutProvider(provider, name)
-	}
-	return fmt.Sprintf("data_%s.libsonnet", nameWOProvider)
+	return fmt.Sprintf("%s.libsonnet", nameWOProvider)
 }
 
 func nameWithoutProvider(provider, name string) string {

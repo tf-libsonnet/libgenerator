@@ -5,6 +5,7 @@ import (
 
 	tfjson "github.com/hashicorp/terraform-json"
 	j "github.com/jsonnet-libs/k8s/pkg/builder"
+	d "github.com/jsonnet-libs/k8s/pkg/builder/docsonnet"
 )
 
 // renderProvider will render the libsonnet code for constructing a provider block for the given provider. The generated
@@ -12,26 +13,37 @@ import (
 // functions for the provider is difficult due to providers being a list instead of a map.
 func renderProvider(name string, schema *tfjson.SchemaBlock) (*j.Doc, error) {
 	locals := []j.LocalType{
-		j.Local(importCore()),
+		importCore(),
+		importDocsonnet(),
 	}
 	rootFields := sortedTypeList{}
 
+	constructorDocs, err := providerConstructorDocs(name, schema)
+	if err != nil {
+		return nil, err
+	}
 	constructor, err := providerConstructor(name, schema)
 	if err != nil {
 		return nil, err
 	}
-	rootFields = append(rootFields, j.Hidden(constructor))
+	rootFields = append(rootFields, *constructorDocs, j.Hidden(constructor))
 
-	attrsConstructor, err := attrsConstructor(newAttrsFnName, schema)
+	attrsConstructorDocs, err := providerNewAttrsDocs(name, schema)
 	if err != nil {
 		return nil, err
 	}
-	rootFields = append(rootFields, j.Hidden(attrsConstructor))
+	attrsConstructor, err := attrsConstructor(
+		newAttrsFnName, "", name, IsProvider, schema,
+	)
+	if err != nil {
+		return nil, err
+	}
+	rootFields = append(rootFields, *attrsConstructorDocs, j.Hidden(*attrsConstructor))
 
 	// Render constructor for nested blocks
 	nestedFields := sortedTypeList{}
 	for _, cfg := range getNestedBlocks(schema) {
-		blockObj, err := nestedBlockObject(cfg)
+		blockObj, err := nestedBlockObject(name, cfg)
 		if err != nil {
 			return nil, err
 		}
@@ -39,6 +51,14 @@ func renderProvider(name string, schema *tfjson.SchemaBlock) (*j.Doc, error) {
 	}
 	sort.Sort(nestedFields)
 	rootFields = append(rootFields, nestedFields...)
+
+	// Prepend package docs
+	docstr, err := providerDocString(name, schema.Description)
+	if err != nil {
+		return nil, err
+	}
+	doc := d.Pkg("provider", "", docstr)
+	rootFields = append([]j.Type{doc}, rootFields...)
 
 	rootObj := j.Object("provider", rootFields...)
 	return &j.Doc{Locals: locals, Root: rootObj}, nil

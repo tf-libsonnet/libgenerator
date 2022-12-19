@@ -1,0 +1,28 @@
+{{- $fnPrefix := .FnPrefix }}
+`{{ .FnPrefix }}.{{ .FnName }}` constructs a new object with attributes and blocks configured for the `{{ .ObjectName }}`
+Terraform {{ .ResourceOrDataSource }}.
+
+{{ if .CoreFnRef }}Unlike [{{ .FnPrefix }}.new]({{ .ConstructorRef }}), this function will not inject the `{{ .ResourceOrDataSource }}`
+block into the root Terraform document. Instead, this must be passed in as the `attrs` argument for the
+{{ .CoreFnRef }} function to build a complete block.
+
+This is most useful when you need to preprocess the attributes with functions, conditional, or looping logic prior to
+injecting into a complete block.
+{{- end }}
+
+{{- if gt (len .Params) 0 }}
+
+**Args**:
+{{- range .Params }}
+  - `{{ .Name }}` (`{{ .Typ }}`): {{ .Description }}
+  {{- if .IsOptional }} When `null`, the `{{ .Name }}` {{ if .IsBlock }}sub block{{ else }}field{{ end }} will be omitted from the resulting object.{{ end }}
+    {{- if .IsBlock }} When setting the sub block, it is recommended to construct the object using the [{{ $fnPrefix }}.{{ .Name }}.new]({{ .ParamConstructorRef }}) constructor.{{ end }}
+{{- end }}
+{{- end }}
+
+**Returns**:
+{{- if .CoreFnRef }}
+  - An attribute object that can be used with {{ .CoreFnRef }} to construct a new `{{ .ObjectName }}` {{ .ResourceOrDataSource }} into the root Terraform configuration.
+{{- else }}
+  - An attribute object that represents the `{{ .ObjectName }}` {{ .ResourceOrDataSource }}.
+{{- end }}

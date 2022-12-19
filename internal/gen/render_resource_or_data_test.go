@@ -23,7 +23,7 @@ func TestRenderResourceComplex(t *testing.T) {
 	complexResource := schema.ResourceSchemas["tfcoremock_complex_resource"]
 
 	jt, err := renderResourceOrDataSource(
-		IsResource, "tfcoremock_complex_resource", complexResource.Block,
+		"tfcoremock", "tfcoremock_complex_resource", IsResource, complexResource.Block,
 	)
 	g.Expect(err).NotTo(HaveOccurred())
 
@@ -41,7 +41,7 @@ func TestRenderResourceSimple(t *testing.T) {
 	simpleResource := schema.ResourceSchemas["tfcoremock_simple_resource"]
 
 	jt, err := renderResourceOrDataSource(
-		IsResource, "tfcoremock_simple_resource", simpleResource.Block,
+		"tfcoremock", "tfcoremock_simple_resource", IsResource, simpleResource.Block,
 	)
 	g.Expect(err).NotTo(HaveOccurred())
 
@@ -59,7 +59,7 @@ func TestRenderDataSourceSimple(t *testing.T) {
 	simpleResource := schema.DataSourceSchemas["tfcoremock_simple_resource"]
 
 	jt, err := renderResourceOrDataSource(
-		IsDataSource, "tfcoremock_simple_resource", simpleResource.Block,
+		"tfcoremock", "tfcoremock_simple_resource", IsDataSource, simpleResource.Block,
 	)
 	g.Expect(err).NotTo(HaveOccurred())
 
@@ -77,7 +77,7 @@ func TestRenderDataSourceComplex(t *testing.T) {
 	complexResource := schema.DataSourceSchemas["tfcoremock_complex_resource"]
 
 	jt, err := renderResourceOrDataSource(
-		IsDataSource, "tfcoremock_complex_resource", complexResource.Block,
+		"tfcoremock", "tfcoremock_complex_resource", IsDataSource, complexResource.Block,
 	)
 	g.Expect(err).NotTo(HaveOccurred())
 

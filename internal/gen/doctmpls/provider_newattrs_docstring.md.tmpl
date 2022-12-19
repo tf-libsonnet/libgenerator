@@ -1,0 +1,24 @@
+{{- $fnPrefix := .FnPrefix }}
+`{{ .FnPrefix }}.{{ .FnName }}` constructs a new object with attributes and blocks configured for the `{{ .ProviderName }}`
+Terraform `provider`.
+
+Unlike [{{ .FnPrefix }}.new]({{ .ConstructorRef }}), this function will not inject the `provider`
+block into the root Terraform document. Instead, this must be passed in as the `attrs` argument for the
+{{ .CoreFnRef }} function to build a complete block.
+
+This is most useful when you need to preprocess the attributes with functions, conditional, or looping logic prior to
+injecting into a complete block.
+
+{{- if gt (len .Params) 0 }}
+
+**Args**:
+{{- range .Params }}
+  - `{{ .Name }}` (`{{ .Typ }}`): {{ .Description }}
+  {{- if .IsOptional }} When `null`, the `{{ .Name }}` {{ if .IsBlock }}sub block{{ else }}field{{ end }} will be omitted from the resulting object.{{ end }}
+    {{- if .IsBlock }} When setting the sub block, it is recommended to construct the object using the [{{ $fnPrefix }}.{{ .Name }}.new]({{ .ParamConstructorRef }}) constructor.{{ end }}
+{{- end }}
+{{- end }}
+
+**Returns**:
+  - An attribute object that can be used with {{ .CoreFnRef }} to construct a new `{{ .ProviderName }}` provider
+  configuration into the root Terraform configuration.

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "dependencies": [
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/tf-libsonnet/core.git",
+          "subdir": ""
+        }
+      },
+      "version": "6baf1f04224a6c296968fc7d10b9ceb24e8d7996"
+    }
+  ],
+  "legacyImports": true
+}

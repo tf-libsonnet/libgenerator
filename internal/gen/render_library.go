@@ -24,7 +24,9 @@ func RenderLibrary(
 	providerName string,
 	schema *tfjson.ProviderSchema,
 ) error {
-	libraryFPath := filepath.Join(outDir, "_gen")
+	libraryFPath := filepath.Join(outDir, libRootDirName)
+	resourcesFPath := filepath.Join(libraryFPath, libResourcesDirName)
+	dataSourcesFPath := filepath.Join(libraryFPath, libDataSourcesDirName)
 	idx := indexImports{
 		providerName: providerName,
 	}
@@ -53,15 +55,15 @@ func RenderLibrary(
 		)
 
 		doc, err := renderResourceOrDataSource(
-			IsResource, resrcName, resrcSchema.Block,
+			providerName, resrcName, IsResource, resrcSchema.Block,
 		)
 		if err != nil {
 			return err
 		}
 
 		resrcFPath := filepath.Join(
-			libraryFPath,
-			resourceNameToLibsonnetName(providerName, resrcName),
+			resourcesFPath,
+			nameToLibsonnetName(providerName, resrcName),
 		)
 		if err := writeDocToFile(logger, doc, resrcFPath); err != nil {
 			return err
@@ -78,15 +80,15 @@ func RenderLibrary(
 		)
 
 		doc, err := renderResourceOrDataSource(
-			IsDataSource, datasrcName, datasrcSchema.Block,
+			providerName, datasrcName, IsDataSource, datasrcSchema.Block,
 		)
 		if err != nil {
 			return err
 		}
 
 		datasrcFPath := filepath.Join(
-			libraryFPath,
-			dataSourceNameToLibsonnetName(providerName, datasrcName),
+			dataSourcesFPath,
+			nameToLibsonnetName(providerName, datasrcName),
 		)
 		if err := writeDocToFile(logger, doc, datasrcFPath); err != nil {
 			return err
@@ -95,7 +97,16 @@ func RenderLibrary(
 
 	// Render the _gen index file
 	logger.Info("Rendering index files")
-	genIdx := renderIndex(idx)
+	dataIdx := renderDataIndex(idx)
+	dataIdxFPath := filepath.Join(dataSourcesFPath, mainLibsonnetName)
+	if err := writeDocToFile(logger, &dataIdx, dataIdxFPath); err != nil {
+		return err
+	}
+
+	genIdx, err := renderIndex(idx)
+	if err != nil {
+		return err
+	}
 	genIdxFPath := filepath.Join(libraryFPath, mainLibsonnetName)
 	if err := writeDocToFile(logger, &genIdx, genIdxFPath); err != nil {
 		return err

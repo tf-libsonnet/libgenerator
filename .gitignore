@@ -1,2 +1,5 @@
 # jsonnet-bundler install path
 vendor
+
+# Test outputs
+out

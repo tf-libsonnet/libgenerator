@@ -7,6 +7,7 @@ import (
 	tfjson "github.com/hashicorp/terraform-json"
 	"github.com/iancoleman/strcase"
 	j "github.com/jsonnet-libs/k8s/pkg/builder"
+	d "github.com/jsonnet-libs/k8s/pkg/builder/docsonnet"
 )
 
 // renderResourceOrDataSource will render the libsonnet code for constructing a resource or data source definition for
@@ -24,61 +25,115 @@ import (
 //     block will have its own `new` functions for constructing the nested block object.
 //   - Nested blocks will recursively nest subblocks if the nested blocks have its own nested blocks.
 func renderResourceOrDataSource(
+	providerName, typ string,
 	resrcOrDataSrc resourceOrDataSource,
-	typ string,
 	schema *tfjson.SchemaBlock,
 ) (*j.Doc, error) {
 	locals := []j.LocalType{
-		j.Local(importCore()),
+		importCore(),
+		importDocsonnet(),
 	}
 	rootFields := sortedTypeList{}
 
-	constructor, err := constructor(resrcOrDataSrc, typ, schema)
+	constructorDocs, err := constructorDocs(providerName, typ, resrcOrDataSrc, schema)
 	if err != nil {
 		return nil, err
 	}
-	rootFields = append(rootFields, j.Hidden(constructor))
+	constructor, err := constructor(providerName, typ, resrcOrDataSrc, schema)
+	if err != nil {
+		return nil, err
+	}
+	rootFields = append(rootFields, *constructorDocs, j.Hidden(*constructor))
 
-	attrConstructor, err := attrsConstructor(newAttrsFnName, schema)
+	attrConstructorDocs, err := attrsConstructorDocs(
+		providerName, typ, resrcOrDataSrc, newAttrsFnName, schema,
+	)
 	if err != nil {
 		return nil, err
 	}
-	rootFields = append(rootFields, j.Hidden(attrConstructor))
+	attrConstructor, err := attrsConstructor(
+		newAttrsFnName, providerName, typ, resrcOrDataSrc, schema,
+	)
+	if err != nil {
+		return nil, err
+	}
+	rootFields = append(rootFields, *attrConstructorDocs, j.Hidden(*attrConstructor))
 
 	// Add modifier functions for each attribute
 	for _, cfg := range getInputAttributes(schema) {
-		bareWithFn, err := withAttributeOrBlockFn(resrcOrDataSrc, typ, cfg.tfName, false, IsNotCollection)
+		bareWithFnDoc, err := withFnDocs(
+			providerName, typ, resrcOrDataSrc, cfg.tfName, getAttrType(cfg.attr), IsNotCollection,
+			false,
+		)
 		if err != nil {
 			return nil, err
 		}
-		rootFields = append(rootFields, j.Hidden(*bareWithFn))
+		bareWithFn, err := withAttributeOrBlockFn(
+			resrcOrDataSrc, providerName, typ, cfg.tfName, false, IsNotCollection,
+		)
+		if err != nil {
+			return nil, err
+		}
+		rootFields = append(rootFields, *bareWithFn, j.Hidden(*bareWithFnDoc))
 
 		if cfg.attr.AttributeNestedType != nil {
 			collTyp := getCollectionType(cfg.attr.AttributeNestedType.NestingMode)
-			mixinWithFn, err := withAttributeOrBlockFn(resrcOrDataSrc, typ, cfg.tfName, true, collTyp)
+			mixinWithFnDoc, err := withFnDocs(
+				providerName, typ, resrcOrDataSrc, cfg.tfName, getAttrType(cfg.attr), collTyp,
+				true,
+			)
 			if err != nil {
 				return nil, err
 			}
-			rootFields = append(rootFields, j.Hidden(*mixinWithFn))
+			mixinWithFn, err := withAttributeOrBlockFn(
+				resrcOrDataSrc, providerName, typ, cfg.tfName, true, collTyp,
+			)
+			if err != nil {
+				return nil, err
+			}
+			rootFields = append(rootFields, *mixinWithFnDoc, j.Hidden(*mixinWithFn))
 		}
 	}
 
 	// Add modifier functions for each block
 	for block, cfg := range getNestedBlocks(schema) {
-		bareWithFn, err := withAttributeOrBlockFn(resrcOrDataSrc, typ, block, false, IsNotCollection)
-		if err != nil {
-			return nil, err
-		}
-		rootFields = append(rootFields, j.Hidden(*bareWithFn))
-
 		collTyp := getCollectionType(cfg.block.NestingMode)
-		mixinWithFn, err := withAttributeOrBlockFn(resrcOrDataSrc, typ, cfg.tfName, true, collTyp)
+
+		bareWithFnDoc, err := withFnDocs(
+			providerName, typ, resrcOrDataSrc, cfg.tfName, getBlockType(cfg.block.NestingMode), collTyp,
+			false,
+		)
 		if err != nil {
 			return nil, err
 		}
-		rootFields = append(rootFields, j.Hidden(*mixinWithFn))
+		bareWithFn, err := withAttributeOrBlockFn(
+			resrcOrDataSrc, providerName, typ, block, false, collTyp,
+		)
+		if err != nil {
+			return nil, err
+		}
+		rootFields = append(rootFields, *bareWithFn, j.Hidden(*bareWithFnDoc))
 
-		blockObj, err := nestedBlockObject(cfg)
+		mixinWithFnDoc, err := withFnDocs(
+			providerName, typ, resrcOrDataSrc, cfg.tfName, getBlockType(cfg.block.NestingMode), collTyp,
+			true,
+		)
+		if err != nil {
+			return nil, err
+		}
+		mixinWithFn, err := withAttributeOrBlockFn(
+			resrcOrDataSrc, providerName, typ, cfg.tfName, true, collTyp,
+		)
+		if err != nil {
+			return nil, err
+		}
+		rootFields = append(rootFields, *mixinWithFn, j.Hidden(*mixinWithFnDoc))
+
+		providerNameForNested := fmt.Sprintf(
+			"%s.%s",
+			providerName, nameWithoutProvider(providerName, typ),
+		)
+		blockObj, err := nestedBlockObject(providerNameForNested, cfg)
 		if err != nil {
 			return nil, err
 		}
@@ -87,11 +142,29 @@ func renderResourceOrDataSource(
 
 	sort.Sort(rootFields)
 
+	// Inject the package docs at the top
+	docstr, err := objectDocString(providerName, typ, resrcOrDataSrc, schema)
+	if err != nil {
+		return nil, err
+	}
+	docs := d.Pkg(
+		nameWithoutProvider(providerName, typ),
+		"",
+		docstr,
+	)
+	rootFields = append([]j.Type{docs}, rootFields...)
+
 	rootObj := j.Object(typ, rootFields...)
 	return &j.Doc{Locals: locals, Root: rootObj}, nil
 }
 
-func constructor(resrcOrDataSrc resourceOrDataSource, typ string, schema *tfjson.SchemaBlock) (j.FuncType, error) {
+// constructor returns the function implementation to construct a new resource or data source into the root terraform
+// document. This will also return the docsonnet compatible docstring.
+func constructor(
+	providerName, typ string,
+	resrcOrDataSrc resourceOrDataSource,
+	schema *tfjson.SchemaBlock,
+) (*j.FuncType, error) {
 	params := constructorParamList(schema)
 
 	// Prepend the label param after it has been sorted so that it is always the first function parameter.
@@ -119,15 +192,22 @@ func constructor(resrcOrDataSrc resourceOrDataSource, typ string, schema *tfjson
 		},
 	)
 
+	// Construct function
 	fn := j.LargeFunc(
 		constructorFnName,
 		j.Args(params.params...),
 		resource,
 	)
-	return fn, nil
+	return &fn, nil
 }
 
-func attrsConstructor(fnName string, schema *tfjson.SchemaBlock) (j.FuncType, error) {
+// attrsConstructor returns the function implementation to construct a new mixin object to set attributes on a resource
+// or data source in the root terraform document. This will also return the docsonnet compatible docstring.
+func attrsConstructor(
+	fnName, providerName, typ string,
+	resrcOrDataSrc resourceOrDataSource,
+	schema *tfjson.SchemaBlock,
+) (*j.FuncType, error) {
 	params := constructorParamList(schema)
 
 	// Prune null attributes so they are omitted from the final json.
@@ -142,12 +222,12 @@ func attrsConstructor(fnName string, schema *tfjson.SchemaBlock) (j.FuncType, er
 			[]j.Type{j.Object("a", params.tfFieldSetters...)},
 		),
 	)
-	return fn, nil
+	return &fn, nil
 }
 
 func withAttributeOrBlockFn(
 	resrcOrDataSrc resourceOrDataSource,
-	typ, attrTFName string,
+	providerName, typ, attrTFName string,
 	isMixin bool,
 	collTyp collectionType,
 ) (*j.FuncType, error) {
@@ -187,7 +267,10 @@ func withAttributeOrBlockFn(
 				j.Merge(j.Object(refMerge,
 					attrRef)))))))
 	fn := j.Func(fnName,
-		j.Args(j.Required(j.String(resrcOrDataSrc.labelArg(), "")), j.Required(j.String(valueArgName, ""))),
+		j.Args(
+			j.Required(j.String(resrcOrDataSrc.labelArg(), "")),
+			j.Required(j.String(valueArgName, "")),
+		),
 		result,
 	)
 	return &fn, nil
@@ -197,19 +280,28 @@ func withAttributeOrBlockFn(
 // data source.
 // For now, this is just the constructors. In the future, we may add mixin objects, but these are currently not
 // implemented due to the complexity involved in setting up the merge operators correctly across the nested levels.
-func nestedBlockObject(cfg *block) (j.Type, error) {
+func nestedBlockObject(providerName string, cfg *block) (j.Type, error) {
 	errRet := j.Null(cfg.tfName)
 	objFields := sortedTypeList{}
 
-	constructor, err := attrsConstructor(constructorFnName, cfg.block.Block)
+	constructorDocs, err := attrsConstructorDocs(
+		providerName, cfg.tfName, IsNestedBlock, constructorFnName, cfg.block.Block,
+	)
 	if err != nil {
 		return errRet, err
 	}
-	objFields = append(objFields, j.Hidden(constructor))
+	constructor, err := attrsConstructor(
+		constructorFnName, providerName, cfg.tfName, IsNestedBlock, cfg.block.Block,
+	)
+	if err != nil {
+		return errRet, err
+	}
+	objFields = append(objFields, *constructorDocs, j.Hidden(*constructor))
 
 	// Add nested objects for deep nested blocks as well.
 	for _, nestedCfg := range getNestedBlocks(cfg.block.Block) {
-		deepNestedBlockObj, err := nestedBlockObject(nestedCfg)
+		providerNameForNested := fmt.Sprintf("%s.%s", providerName, cfg.tfName)
+		deepNestedBlockObj, err := nestedBlockObject(providerNameForNested, nestedCfg)
 		if err != nil {
 			return errRet, err
 		}
