@@ -103,6 +103,18 @@ func renderResourceOrDataSource(
 
 	sort.Sort(rootFields)
 
+	// Inject the package docs at the top
+	docstr, err := objectDocString(providerName, typ, resrcOrDataSrc, schema)
+	if err != nil {
+		return nil, err
+	}
+	docs := d.Pkg(
+		nameWithoutProvider(providerName, typ),
+		"",
+		docstr,
+	)
+	rootFields = append([]j.Type{docs}, rootFields...)
+
 	rootObj := j.Object(typ, rootFields...)
 	return &j.Doc{Locals: locals, Root: rootObj}, nil
 }

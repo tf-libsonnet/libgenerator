@@ -103,7 +103,10 @@ func RenderLibrary(
 		return err
 	}
 
-	genIdx := renderIndex(idx)
+	genIdx, err := renderIndex(idx)
+	if err != nil {
+		return err
+	}
 	genIdxFPath := filepath.Join(libraryFPath, mainLibsonnetName)
 	if err := writeDocToFile(logger, &genIdx, genIdxFPath); err != nil {
 		return err

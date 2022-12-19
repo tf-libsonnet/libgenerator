@@ -5,6 +5,7 @@ import (
 
 	tfjson "github.com/hashicorp/terraform-json"
 	j "github.com/jsonnet-libs/k8s/pkg/builder"
+	d "github.com/jsonnet-libs/k8s/pkg/builder/docsonnet"
 )
 
 // renderProvider will render the libsonnet code for constructing a provider block for the given provider. The generated
@@ -42,6 +43,14 @@ func renderProvider(name string, schema *tfjson.SchemaBlock) (*j.Doc, error) {
 	}
 	sort.Sort(nestedFields)
 	rootFields = append(rootFields, nestedFields...)
+
+	// Prepend package docs
+	docstr, err := providerDocString(name, schema.Description)
+	if err != nil {
+		return nil, err
+	}
+	doc := d.Pkg("provider", "", docstr)
+	rootFields = append([]j.Type{doc}, rootFields...)
 
 	rootObj := j.Object("provider", rootFields...)
 	return &j.Doc{Locals: locals, Root: rootObj}, nil

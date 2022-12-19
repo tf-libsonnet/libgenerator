@@ -20,7 +20,7 @@ type indexImports struct {
 	dataSources  []string
 }
 
-func renderIndex(idx indexImports) j.Doc {
+func renderIndex(idx indexImports) (j.Doc, error) {
 	fields := sortedTypeList{}
 	for _, r := range idx.resources {
 		libsonnet := nameToLibsonnetName(idx.providerName, r)
@@ -46,15 +46,18 @@ func renderIndex(idx indexImports) j.Doc {
 	)
 
 	// Generate pkg docs and prepend to the fields list so that it is the first field.
-	// TODO
-	doc := d.Pkg("foo", "", "")
+	docstr, err := rootDocString(idx.providerName, "TODO")
+	if err != nil {
+		return j.Doc{}, err
+	}
+	doc := d.Pkg(idx.providerName, "", docstr)
 	fields = append([]j.Type{doc}, fields...)
 
 	root := j.Object("", fields...)
 	return j.Doc{
 		Locals: []j.LocalType{importDocsonnet()},
 		Root:   root,
-	}
+	}, nil
 }
 
 func renderDataIndex(idx indexImports) j.Doc {
