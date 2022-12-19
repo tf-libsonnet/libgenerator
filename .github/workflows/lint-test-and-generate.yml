@@ -160,7 +160,7 @@ jobs:
 
       - name: commit generated code to new branch if files changed
         id: auto-commit-action
-        uses: stefanzweifel/git-auto-commit-action@0b007fbd1180b8e3a3668b21c6517392fe8f26eb # v4.15.4
+        uses: stefanzweifel/git-auto-commit-action@3ea6ae190baf489ba007f7c92608f33ce20ef04a # v4.16.0
         with:
           repository: ${{ matrix.entry.repo }}
           branch: pr-${{ github.event.pull_request.number }}
