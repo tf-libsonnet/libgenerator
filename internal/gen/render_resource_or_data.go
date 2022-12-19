@@ -46,7 +46,7 @@ func renderResourceOrDataSource(
 	rootFields = append(rootFields, *constructorDocs, j.Hidden(*constructor))
 
 	attrConstructorDocs, err := attrsConstructorDocs(
-		providerName, typ, resrcOrDataSrc, newAttrsFnName, schema,
+		providerName, typ, resrcOrDataSrc, newAttrsFnName, "", schema,
 	)
 	if err != nil {
 		return nil, err
@@ -133,7 +133,7 @@ func renderResourceOrDataSource(
 			"%s.%s",
 			providerName, nameWithoutProvider(providerName, typ),
 		)
-		blockObj, err := nestedBlockObject(providerNameForNested, cfg)
+		blockObj, err := nestedBlockObject(providerNameForNested, "", cfg)
 		if err != nil {
 			return nil, err
 		}
@@ -280,12 +280,12 @@ func withAttributeOrBlockFn(
 // data source.
 // For now, this is just the constructors. In the future, we may add mixin objects, but these are currently not
 // implemented due to the complexity involved in setting up the merge operators correctly across the nested levels.
-func nestedBlockObject(providerName string, cfg *block) (j.Type, error) {
+func nestedBlockObject(providerName, nestedName string, cfg *block) (j.Type, error) {
 	errRet := j.Null(cfg.tfName)
 	objFields := sortedTypeList{}
 
 	constructorDocs, err := attrsConstructorDocs(
-		providerName, cfg.tfName, IsNestedBlock, constructorFnName, cfg.block.Block,
+		providerName, cfg.tfName, IsNestedBlock, constructorFnName, nestedName, cfg.block.Block,
 	)
 	if err != nil {
 		return errRet, err
@@ -301,7 +301,11 @@ func nestedBlockObject(providerName string, cfg *block) (j.Type, error) {
 	// Add nested objects for deep nested blocks as well.
 	for _, nestedCfg := range getNestedBlocks(cfg.block.Block) {
 		providerNameForNested := fmt.Sprintf("%s.%s", providerName, cfg.tfName)
-		deepNestedBlockObj, err := nestedBlockObject(providerNameForNested, nestedCfg)
+		deepNestedBlockObj, err := nestedBlockObject(
+			providerNameForNested,
+			nestedName+cfg.tfName,
+			nestedCfg,
+		)
 		if err != nil {
 			return errRet, err
 		}

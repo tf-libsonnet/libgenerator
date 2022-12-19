@@ -101,7 +101,7 @@ func constructorDocString(
 	resrcOrDataSrc resourceOrDataSource,
 	schema *tfjson.SchemaBlock,
 ) (string, error) {
-	data := getConstructorDocStringData(providerName, typ, resrcOrDataSrc, constructorFnName, schema)
+	data := getConstructorDocStringData(providerName, typ, resrcOrDataSrc, constructorFnName, "", schema)
 
 	var out bytes.Buffer
 	err := constructorDocStringTmpl.Execute(&out, data)
@@ -111,10 +111,11 @@ func constructorDocString(
 func attrsConstructorDocs(
 	providerName, typ string,
 	resrcOrDataSrc resourceOrDataSource,
-	fnName string,
+	fnName,
+	nestedName string,
 	schema *tfjson.SchemaBlock,
 ) (*j.Type, error) {
-	docstr, err := attrsConstructorDocString(providerName, typ, resrcOrDataSrc, fnName, schema)
+	docstr, err := attrsConstructorDocString(providerName, typ, resrcOrDataSrc, fnName, nestedName, schema)
 	if err != nil {
 		return nil, err
 	}
@@ -130,10 +131,11 @@ func attrsConstructorDocs(
 func attrsConstructorDocString(
 	providerName, typ string,
 	resrcOrDataSrc resourceOrDataSource,
-	fnName string,
+	fnName,
+	nestedName string,
 	schema *tfjson.SchemaBlock,
 ) (string, error) {
-	data := getConstructorDocStringData(providerName, typ, resrcOrDataSrc, fnName, schema)
+	data := getConstructorDocStringData(providerName, typ, resrcOrDataSrc, fnName, nestedName, schema)
 
 	var out bytes.Buffer
 	err := attrsConstructorDocStringTmpl.Execute(&out, data)
@@ -191,7 +193,8 @@ func withFnDocString(
 func getConstructorDocStringData(
 	providerName, typ string,
 	resrcOrDataSrc resourceOrDataSource,
-	fnName string,
+	fnName,
+	nestedName string,
 	schema *tfjson.SchemaBlock,
 ) constructorDocStringData {
 	objectName := nameWithoutProvider(providerName, typ)
@@ -205,10 +208,7 @@ func getConstructorDocStringData(
 		CoreFnRef:            getCoreFnRef(resrcOrDataSrc),
 		FnPrefix:             fmt.Sprintf("%s.%s", providerName, objectName),
 		RefPrefix:            fmt.Sprintf("%s_%s", providerName, objectName),
-		ConstructorRef: fmt.Sprintf(
-			"#fn-%snew",
-			strings.ToLower(objectName),
-		),
+		ConstructorRef:       "#fn-new",
 	}
 	if resrcOrDataSrc == IsDataSource {
 		data.FnPrefix = fmt.Sprintf("%s.data.%s", providerName, objectName)
@@ -247,7 +247,7 @@ func getConstructorDocStringData(
 			IsBlock:     true,
 			ParamConstructorRef: fmt.Sprintf(
 				"#fn-%s%snew",
-				strings.ToLower(objectName),
+				strings.ToLower(nestedName),
 				strings.ToLower(block),
 			),
 		})

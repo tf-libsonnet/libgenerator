@@ -43,7 +43,7 @@ func renderProvider(name string, schema *tfjson.SchemaBlock) (*j.Doc, error) {
 	// Render constructor for nested blocks
 	nestedFields := sortedTypeList{}
 	for _, cfg := range getNestedBlocks(schema) {
-		blockObj, err := nestedBlockObject(name, cfg)
+		blockObj, err := nestedBlockObject(name, "", cfg)
 		if err != nil {
 			return nil, err
 		}

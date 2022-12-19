@@ -28,7 +28,7 @@ func TestDocStringResourceAttrsConstructor(t *testing.T) {
 	complexResource := schema.ResourceSchemas["tfcoremock_complex_resource"]
 	out, err := attrsConstructorDocString(
 		"tfcoremock", "tfcoremock_complex_resource",
-		IsResource, "newAttrs", complexResource.Block,
+		IsResource, "newAttrs", "", complexResource.Block,
 	)
 	g.Expect(err).NotTo(HaveOccurred())
 	t.Logf(out)
