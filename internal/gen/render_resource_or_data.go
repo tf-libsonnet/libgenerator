@@ -63,6 +63,7 @@ func renderResourceOrDataSource(
 	for _, cfg := range getInputAttributes(schema) {
 		bareWithFnDoc, err := withFnDocs(
 			providerName, typ, resrcOrDataSrc, cfg.tfName, getAttrType(cfg.attr), IsNotCollection,
+			false,
 		)
 		if err != nil {
 			return nil, err
@@ -79,6 +80,7 @@ func renderResourceOrDataSource(
 			collTyp := getCollectionType(cfg.attr.AttributeNestedType.NestingMode)
 			mixinWithFnDoc, err := withFnDocs(
 				providerName, typ, resrcOrDataSrc, cfg.tfName, getAttrType(cfg.attr), collTyp,
+				true,
 			)
 			if err != nil {
 				return nil, err
@@ -99,6 +101,7 @@ func renderResourceOrDataSource(
 
 		bareWithFnDoc, err := withFnDocs(
 			providerName, typ, resrcOrDataSrc, cfg.tfName, getBlockType(cfg.block.NestingMode), collTyp,
+			false,
 		)
 		if err != nil {
 			return nil, err
@@ -113,6 +116,7 @@ func renderResourceOrDataSource(
 
 		mixinWithFnDoc, err := withFnDocs(
 			providerName, typ, resrcOrDataSrc, cfg.tfName, getBlockType(cfg.block.NestingMode), collTyp,
+			true,
 		)
 		if err != nil {
 			return nil, err

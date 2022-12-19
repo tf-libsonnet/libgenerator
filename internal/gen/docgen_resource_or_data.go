@@ -146,8 +146,13 @@ func withFnDocs(
 	attrOrBlockName string,
 	typ string,
 	collTyp collectionType,
+	isMixin bool,
 ) (*j.Type, error) {
 	fnName := fmt.Sprintf("with%s", strcase.ToCamel(attrOrBlockName))
+	if isMixin {
+		fnName = fnName + "Mixin"
+	}
+
 	docstr, err := withFnDocString(
 		providerName, nameWithoutProvider(providerName, typ), resrcOrDataSrc,
 		attrOrBlockName, fnName, typ, collTyp,
