@@ -291,30 +291,15 @@ func providerNameToLibsonnetName(name string) string {
 	return fmt.Sprintf("provider_%s.libsonnet", name)
 }
 
-// resourceNameToLibsonnetName returns the libsonnet filename given a resource
-// name. This expects a name of the form PROVIDER_RESOURCE, and returns
-// the name as resource_RESOURCE.libsonnet.
-// If the name already omits the provider, then provider must be set as empty
-// string.
-func resourceNameToLibsonnetName(provider, name string) string {
+// nameToLibsonnetName returns the libsonnet filename given a resource or data source name. This expects a name of the
+// form PROVIDER_RESOURCE, and returns the name as RESOURCE.libsonnet. If the name already omits the provider, then
+// provider must be set as empty string.
+func nameToLibsonnetName(provider, name string) string {
 	nameWOProvider := name
 	if provider != "" {
 		nameWOProvider = nameWithoutProvider(provider, name)
 	}
-	return fmt.Sprintf("resource_%s.libsonnet", nameWOProvider)
-}
-
-// dataSourceNameToLibsonnetName returns the libsonnet filename given a data
-// source name. This expects a name of the form PROVIDER_DATASRC, and returns
-// the name as data_DATASRC.libsonnet.
-// If the name already omits the provider, then provider must be set as empty
-// string.
-func dataSourceNameToLibsonnetName(provider, name string) string {
-	nameWOProvider := name
-	if provider != "" {
-		nameWOProvider = nameWithoutProvider(provider, name)
-	}
-	return fmt.Sprintf("data_%s.libsonnet", nameWOProvider)
+	return fmt.Sprintf("%s.libsonnet", nameWOProvider)
 }
 
 func nameWithoutProvider(provider, name string) string {

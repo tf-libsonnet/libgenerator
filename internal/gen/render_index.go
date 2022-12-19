@@ -8,6 +8,12 @@ import (
 	d "github.com/jsonnet-libs/k8s/pkg/builder/docsonnet"
 )
 
+const (
+	libRootDirName        = "_gen"
+	libResourcesDirName   = "resources"
+	libDataSourcesDirName = "data"
+)
+
 type indexImports struct {
 	providerName string
 	resources    []string
@@ -17,10 +23,10 @@ type indexImports struct {
 func renderIndex(idx indexImports) j.Doc {
 	fields := sortedTypeList{}
 	for _, r := range idx.resources {
-		libsonnet := resourceNameToLibsonnetName(idx.providerName, r)
+		libsonnet := nameToLibsonnetName(idx.providerName, r)
 		fields = append(
 			fields,
-			j.Import(r, filepath.Join(".", libsonnet)),
+			j.Import(r, filepath.Join(".", libResourcesDirName, libsonnet)),
 		)
 	}
 	sort.Sort(fields)
@@ -33,22 +39,38 @@ func renderIndex(idx indexImports) j.Doc {
 		fields...,
 	)
 
-	dataFields := sortedTypeList{}
-	for _, data := range idx.dataSources {
-		libsonnet := dataSourceNameToLibsonnetName(idx.providerName, data)
-		dataFields = append(
-			dataFields,
-			j.Import(data, filepath.Join(".", libsonnet)),
-		)
-	}
-	sort.Sort(dataFields)
-
-	// Data sources are namespaced with the data keyword.
-	fields = append(fields, j.Object("data", dataFields...))
+	// Import the data source index, namespaced under the data key.
+	fields = append(
+		fields,
+		j.Import("data", filepath.Join(".", libDataSourcesDirName, "main.libsonnet")),
+	)
 
 	// Generate pkg docs and prepend to the fields list so that it is the first field.
 	// TODO
 	doc := d.Pkg("foo", "", "")
+	fields = append([]j.Type{doc}, fields...)
+
+	root := j.Object("", fields...)
+	return j.Doc{
+		Locals: []j.LocalType{importDocsonnet()},
+		Root:   root,
+	}
+}
+
+func renderDataIndex(idx indexImports) j.Doc {
+	fields := sortedTypeList{}
+	for _, data := range idx.dataSources {
+		libsonnet := nameToLibsonnetName(idx.providerName, data)
+		fields = append(
+			fields,
+			j.Import(data, filepath.Join(".", libsonnet)),
+		)
+	}
+	sort.Sort(fields)
+
+	// Generate pkg docs and prepend to the fields list so that it is the first field.
+	// TODO
+	doc := d.Pkg("data", "", "")
 	fields = append([]j.Type{doc}, fields...)
 
 	root := j.Object("", fields...)
