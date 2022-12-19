@@ -207,7 +207,7 @@ func getConstructorDocStringData(
 		RefPrefix:            fmt.Sprintf("%s_%s", providerName, objectName),
 		ConstructorRef: fmt.Sprintf(
 			"#fn-%snew",
-			strings.ToLower(strcase.ToCamel(objectName)),
+			strings.ToLower(objectName),
 		),
 	}
 	if resrcOrDataSrc == IsDataSource {
@@ -247,8 +247,8 @@ func getConstructorDocStringData(
 			IsBlock:     true,
 			ParamConstructorRef: fmt.Sprintf(
 				"#fn-%s%snew",
-				strings.ToLower(strcase.ToCamel(objectName)),
-				strings.ToLower(strcase.ToCamel(block)),
+				strings.ToLower(objectName),
+				strings.ToLower(block),
 			),
 		})
 	}
