@@ -12,6 +12,8 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	tfjson "github.com/hashicorp/terraform-json"
 	"github.com/iancoleman/strcase"
+	j "github.com/jsonnet-libs/k8s/pkg/builder"
+	d "github.com/jsonnet-libs/k8s/pkg/builder/docsonnet"
 )
 
 var (
@@ -76,6 +78,24 @@ type withFnDocStringData struct {
 	IsMixin bool
 }
 
+func constructorDocs(
+	providerName, typ string,
+	resrcOrDataSrc resourceOrDataSource,
+	schema *tfjson.SchemaBlock,
+) (*j.Type, error) {
+	docstr, err := constructorDocString(providerName, typ, resrcOrDataSrc, schema)
+	if err != nil {
+		return nil, err
+	}
+	doc := d.Func(
+		constructorFnName,
+		docstr,
+		// TODO: set args
+		nil,
+	)
+	return &doc, nil
+}
+
 func constructorDocString(
 	providerName, typ string,
 	resrcOrDataSrc resourceOrDataSource,
@@ -86,6 +106,25 @@ func constructorDocString(
 	var out bytes.Buffer
 	err := constructorDocStringTmpl.Execute(&out, data)
 	return out.String(), err
+}
+
+func attrsConstructorDocs(
+	providerName, typ string,
+	resrcOrDataSrc resourceOrDataSource,
+	fnName string,
+	schema *tfjson.SchemaBlock,
+) (*j.Type, error) {
+	docstr, err := attrsConstructorDocString(providerName, typ, resrcOrDataSrc, fnName, schema)
+	if err != nil {
+		return nil, err
+	}
+	doc := d.Func(
+		fnName,
+		docstr,
+		// TODO: set args
+		nil,
+	)
+	return &doc, nil
 }
 
 func attrsConstructorDocString(

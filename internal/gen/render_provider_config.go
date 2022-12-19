@@ -24,13 +24,13 @@ func renderProvider(name string, schema *tfjson.SchemaBlock) (*j.Doc, error) {
 	}
 	rootFields = append(rootFields, j.Hidden(constructor))
 
-	attrsConstructor, attrsConstructorDocs, err := attrsConstructor(
+	attrsConstructor, err := attrsConstructor(
 		newAttrsFnName, "", name, IsProvider, schema,
 	)
 	if err != nil {
 		return nil, err
 	}
-	rootFields = append(rootFields, attrsConstructorDocs, j.Hidden(*attrsConstructor))
+	rootFields = append(rootFields, j.Hidden(*attrsConstructor))
 
 	// Render constructor for nested blocks
 	nestedFields := sortedTypeList{}

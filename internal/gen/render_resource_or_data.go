@@ -35,19 +35,29 @@ func renderResourceOrDataSource(
 	}
 	rootFields := sortedTypeList{}
 
-	constructor, constructorDocs, err := constructor(providerName, typ, resrcOrDataSrc, schema)
+	constructorDocs, err := constructorDocs(providerName, typ, resrcOrDataSrc, schema)
 	if err != nil {
 		return nil, err
 	}
-	rootFields = append(rootFields, constructorDocs, j.Hidden(*constructor))
+	constructor, err := constructor(providerName, typ, resrcOrDataSrc, schema)
+	if err != nil {
+		return nil, err
+	}
+	rootFields = append(rootFields, *constructorDocs, j.Hidden(*constructor))
 
-	attrConstructor, attrConstructorDocs, err := attrsConstructor(
+	attrConstructorDocs, err := attrsConstructorDocs(
+		providerName, typ, resrcOrDataSrc, newAttrsFnName, schema,
+	)
+	if err != nil {
+		return nil, err
+	}
+	attrConstructor, err := attrsConstructor(
 		newAttrsFnName, providerName, typ, resrcOrDataSrc, schema,
 	)
 	if err != nil {
 		return nil, err
 	}
-	rootFields = append(rootFields, attrConstructorDocs, j.Hidden(*attrConstructor))
+	rootFields = append(rootFields, *attrConstructorDocs, j.Hidden(*attrConstructor))
 
 	// Add modifier functions for each attribute
 	for _, cfg := range getInputAttributes(schema) {
@@ -125,7 +135,7 @@ func constructor(
 	providerName, typ string,
 	resrcOrDataSrc resourceOrDataSource,
 	schema *tfjson.SchemaBlock,
-) (*j.FuncType, j.Type, error) {
+) (*j.FuncType, error) {
 	params := constructorParamList(schema)
 
 	// Prepend the label param after it has been sorted so that it is always the first function parameter.
@@ -153,25 +163,13 @@ func constructor(
 		},
 	)
 
-	// Construct docs
-	docstring, err := constructorDocString(providerName, typ, resrcOrDataSrc, schema)
-	if err != nil {
-		return nil, nil, err
-	}
-	doc := d.Func(
-		constructorFnName,
-		docstring,
-		// TODO: set args
-		nil,
-	)
-
 	// Construct function
 	fn := j.LargeFunc(
 		constructorFnName,
 		j.Args(params.params...),
 		resource,
 	)
-	return &fn, doc, nil
+	return &fn, nil
 }
 
 // attrsConstructor returns the function implementation to construct a new mixin object to set attributes on a resource
@@ -180,20 +178,8 @@ func attrsConstructor(
 	fnName, providerName, typ string,
 	resrcOrDataSrc resourceOrDataSource,
 	schema *tfjson.SchemaBlock,
-) (*j.FuncType, j.Type, error) {
+) (*j.FuncType, error) {
 	params := constructorParamList(schema)
-
-	// Construct docs
-	docstring, err := attrsConstructorDocString(providerName, typ, resrcOrDataSrc, fnName, schema)
-	if err != nil {
-		return nil, nil, err
-	}
-	doc := d.Func(
-		fnName,
-		docstring,
-		// TODO: set args
-		nil,
-	)
 
 	// Prune null attributes so they are omitted from the final json.
 	// Although this is not strictly necessary to do, it makes the rendered terraform json (NOT jsonnet code!) nice and
@@ -207,7 +193,7 @@ func attrsConstructor(
 			[]j.Type{j.Object("a", params.tfFieldSetters...)},
 		),
 	)
-	return &fn, doc, nil
+	return &fn, nil
 }
 
 func withAttributeOrBlockFn(
@@ -287,13 +273,16 @@ func nestedBlockObject(providerName string, cfg *block) (j.Type, error) {
 	errRet := j.Null(cfg.tfName)
 	objFields := sortedTypeList{}
 
-	constructor, constructorDocs, err := attrsConstructor(
+	constructorDocs, err := attrsConstructorDocs(
+		providerName, cfg.tfName, IsNestedBlock, constructorFnName, cfg.block.Block,
+	)
+	constructor, err := attrsConstructor(
 		constructorFnName, providerName, cfg.tfName, IsNestedBlock, cfg.block.Block,
 	)
 	if err != nil {
 		return errRet, err
 	}
-	objFields = append(objFields, constructorDocs, j.Hidden(*constructor))
+	objFields = append(objFields, *constructorDocs, j.Hidden(*constructor))
 
 	// Add nested objects for deep nested blocks as well.
 	for _, nestedCfg := range getNestedBlocks(cfg.block.Block) {
