@@ -61,44 +61,69 @@ func renderResourceOrDataSource(
 
 	// Add modifier functions for each attribute
 	for _, cfg := range getInputAttributes(schema) {
-		bareWithFn, bareWithFnDoc, err := withAttributeOrBlockFn(
+		bareWithFnDoc, err := withFnDocs(
+			providerName, typ, resrcOrDataSrc, cfg.tfName, getAttrType(cfg.attr), IsNotCollection,
+		)
+		if err != nil {
+			return nil, err
+		}
+		bareWithFn, err := withAttributeOrBlockFn(
 			resrcOrDataSrc, providerName, typ, cfg.tfName, false, IsNotCollection,
 		)
 		if err != nil {
 			return nil, err
 		}
-		rootFields = append(rootFields, j.Hidden(*bareWithFn), j.Hidden(*bareWithFnDoc))
+		rootFields = append(rootFields, *bareWithFn, j.Hidden(*bareWithFnDoc))
 
 		if cfg.attr.AttributeNestedType != nil {
 			collTyp := getCollectionType(cfg.attr.AttributeNestedType.NestingMode)
-			mixinWithFn, mixinWithFnDoc, err := withAttributeOrBlockFn(
+			mixinWithFnDoc, err := withFnDocs(
+				providerName, typ, resrcOrDataSrc, cfg.tfName, getAttrType(cfg.attr), collTyp,
+			)
+			if err != nil {
+				return nil, err
+			}
+			mixinWithFn, err := withAttributeOrBlockFn(
 				resrcOrDataSrc, providerName, typ, cfg.tfName, true, collTyp,
 			)
 			if err != nil {
 				return nil, err
 			}
-			rootFields = append(rootFields, j.Hidden(*mixinWithFn), j.Hidden(*mixinWithFnDoc))
+			rootFields = append(rootFields, *mixinWithFnDoc, j.Hidden(*mixinWithFn))
 		}
 	}
 
 	// Add modifier functions for each block
 	for block, cfg := range getNestedBlocks(schema) {
-		bareWithFn, bareWithFnDoc, err := withAttributeOrBlockFn(
-			resrcOrDataSrc, providerName, typ, block, false, IsNotCollection,
+		collTyp := getCollectionType(cfg.block.NestingMode)
+
+		bareWithFnDoc, err := withFnDocs(
+			providerName, typ, resrcOrDataSrc, cfg.tfName, getBlockType(cfg.block.NestingMode), collTyp,
 		)
 		if err != nil {
 			return nil, err
 		}
-		rootFields = append(rootFields, j.Hidden(*bareWithFn), j.Hidden(*bareWithFnDoc))
+		bareWithFn, err := withAttributeOrBlockFn(
+			resrcOrDataSrc, providerName, typ, block, false, collTyp,
+		)
+		if err != nil {
+			return nil, err
+		}
+		rootFields = append(rootFields, *bareWithFn, j.Hidden(*bareWithFnDoc))
 
-		collTyp := getCollectionType(cfg.block.NestingMode)
-		mixinWithFn, mixinWithFnDoc, err := withAttributeOrBlockFn(
+		mixinWithFnDoc, err := withFnDocs(
+			providerName, typ, resrcOrDataSrc, cfg.tfName, getBlockType(cfg.block.NestingMode), collTyp,
+		)
+		if err != nil {
+			return nil, err
+		}
+		mixinWithFn, err := withAttributeOrBlockFn(
 			resrcOrDataSrc, providerName, typ, cfg.tfName, true, collTyp,
 		)
 		if err != nil {
 			return nil, err
 		}
-		rootFields = append(rootFields, j.Hidden(*mixinWithFn), j.Hidden(*mixinWithFnDoc))
+		rootFields = append(rootFields, *mixinWithFn, j.Hidden(*mixinWithFnDoc))
 
 		providerNameForNested := fmt.Sprintf(
 			"%s.%s",
@@ -201,7 +226,7 @@ func withAttributeOrBlockFn(
 	providerName, typ, attrTFName string,
 	isMixin bool,
 	collTyp collectionType,
-) (*j.FuncType, *j.CallType, error) {
+) (*j.FuncType, error) {
 	valueArgName := "value"
 
 	// NOTE: this is a hack to work around the lack of functionality to introduce a reference key merge in the builder
@@ -228,7 +253,7 @@ func withAttributeOrBlockFn(
 			)
 			attrRef = j.Merge(conditional)
 		default:
-			return nil, nil, fmt.Errorf("Mixin function for attribute %s with collection type %s is not supported", attrTFName, collTyp)
+			return nil, fmt.Errorf("Mixin function for attribute %s with collection type %s is not supported", attrTFName, collTyp)
 		}
 	}
 
@@ -244,25 +269,7 @@ func withAttributeOrBlockFn(
 		),
 		result,
 	)
-
-	docstring, err := withFnDocString(
-		providerName, nameWithoutProvider(providerName, typ), resrcOrDataSrc,
-		attrTFName, fnName, collTyp,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-	doc := j.Call(
-		"#"+fnName,
-		"d.fn",
-		[]j.Type{
-			j.String("help", docstring),
-			// TODO
-			j.List("args"),
-		},
-	)
-
-	return &fn, &doc, nil
+	return &fn, nil
 }
 
 // nestedBlockObject renders the object with functions for constructing and modifying nested blocks on the resource or

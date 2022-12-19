@@ -140,16 +140,41 @@ func attrsConstructorDocString(
 	return out.String(), err
 }
 
+func withFnDocs(
+	providerName, objectName string,
+	resrcOrDataSrc resourceOrDataSource,
+	attrOrBlockName string,
+	typ string,
+	collTyp collectionType,
+) (*j.Type, error) {
+	fnName := fmt.Sprintf("with%s", strcase.ToCamel(attrOrBlockName))
+	docstr, err := withFnDocString(
+		providerName, nameWithoutProvider(providerName, typ), resrcOrDataSrc,
+		attrOrBlockName, fnName, typ, collTyp,
+	)
+	if err != nil {
+		return nil, err
+	}
+	doc := d.Func(
+		fnName,
+		docstr,
+		// TODO
+		nil,
+	)
+	return &doc, nil
+}
+
 // TODO: consolidate params list
 func withFnDocString(
 	providerName, objectName string,
 	resrcOrDataSrc resourceOrDataSource,
 	attrOrBlockName string,
 	fnName string,
+	typ string,
 	collTyp collectionType,
 ) (string, error) {
 	data := getWithFnDocStringData(
-		providerName, objectName, resrcOrDataSrc, attrOrBlockName, fnName,
+		providerName, objectName, resrcOrDataSrc, attrOrBlockName, fnName, typ,
 		collTyp == IsListOrSet, collTyp == IsMap,
 	)
 
@@ -230,6 +255,7 @@ func getWithFnDocStringData(
 	resrcOrDataSrc resourceOrDataSource,
 	attrOrBlockName string,
 	fnName string,
+	typ string,
 	isArray, isMap bool,
 ) withFnDocStringData {
 	isMixin := strings.HasSuffix(fnName, "Mixin")
@@ -237,7 +263,7 @@ func getWithFnDocStringData(
 	data := withFnDocStringData{
 		AttrOrBlockName: attrOrBlockName,
 		ObjectName:      objectName,
-		Typ:             "TODO",
+		Typ:             typ,
 		FnPrefix: fmt.Sprintf(
 			"%s.%s",
 			providerName, objectName,
