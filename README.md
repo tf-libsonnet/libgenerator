@@ -82,3 +82,8 @@ The following table clarifies the current status of the providers according to t
 Note that the stability levels within a provider library will vary across resources and data sources. That is, some
 resources within a provider may be considered **Alpha** level, while others may be **Stable**. In general, a **Stable**
 provider has a large enough community of users such that most resources and data sources are covered.
+
+
+## Contributing
+
+Refer to the [CONTRIBUTING.md](/CONTRIBUTING.md) document for information on how to contribute to `tf.libsonnet`.
