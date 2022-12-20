@@ -84,6 +84,12 @@ resources within a provider may be considered **Alpha** level, while others may 
 provider has a large enough community of users such that most resources and data sources are covered.
 
 
+## Support
+
+If you have any questions about how to use the `tf.libsonnet` libraries, ask in the [Organization GitHub
+Discussion](https://github.com/orgs/tf-libsonnet/discussions).
+
+
 ## Contributing
 
 Refer to the [CONTRIBUTING.md](/CONTRIBUTING.md) document for information on how to contribute to `tf.libsonnet`.
