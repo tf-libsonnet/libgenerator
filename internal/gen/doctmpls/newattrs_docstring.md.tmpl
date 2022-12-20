@@ -14,10 +14,13 @@ injecting into a complete block.
 
 **Args**:
 {{- range .Params }}
-  - `{{ .Name }}` (`{{ .Typ }}`): {{ .Description }}
+  - `{{ .Name }}` (`{{ .Typ }}`):
+  {{- if .Description }} {{ .Description }}
+  {{- else }} Set the `{{ .Name }}` field on the resulting object.
+  {{- end }}
   {{- if .IsOptional }} When `null`, the `{{ .Name }}` {{ if .IsBlock }}sub block{{ else }}field{{ end }} will be omitted from the resulting object.{{ end }}
     {{- if .IsBlock }} When setting the sub block, it is recommended to construct the object using the [{{ $fnPrefix }}.{{ .Name }}.new]({{ .ParamConstructorRef }}) constructor.{{ end }}
-{{- end }}
+  {{- end }}
 {{- end }}
 
 **Returns**:

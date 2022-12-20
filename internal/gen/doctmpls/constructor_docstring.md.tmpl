@@ -1,4 +1,5 @@
 {{- $fnPrefix := .FnPrefix }}
+{{- $resrcOrDataSrc := .ResourceOrDataSource }}
 `{{ .FnPrefix }}.new` injects a new `{{ .RefPrefix }}` Terraform `{{ .ResourceOrDataSource }}`
 block into the root module document.
 
@@ -20,7 +21,10 @@ or `$` to refer to the root object. Instead, make an explicit outer object using
 **Args**:
   - `{{ .LabelParam }}` (`string`): The name label of the block.
 {{- range .Params }}
-  - `{{ .Name }}` (`{{ .Typ }}`): {{ .Description }}
+  - `{{ .Name }}` (`{{ .Typ }}`):
+  {{- if .Description }} {{ .Description }}
+  {{- else }} Set the `{{ .Name }}` field on the resulting {{ $resrcOrDataSrc }} block.
+  {{- end }}
   {{- if .IsOptional }} When `null`, the `{{ .Name }}` {{ if .IsBlock }}sub block{{ else }}field{{ end }} will be omitted from the resulting object.{{ end }}
     {{- if .IsBlock }} When setting the sub block, it is recommended to construct the object using the [{{ $fnPrefix }}.{{ .Name }}.new]({{ .ParamConstructorRef }}) constructor.{{ end }}
 {{- end }}
