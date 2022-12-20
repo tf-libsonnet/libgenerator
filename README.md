@@ -1,4 +1,16 @@
-# tf.libsonnet Library Generator
+<h1 align="center">tf-libsonnet Generator</h1>
+
+<p align="center">
+  <a href="https://github.com/tf-libsonnet/libgenerator/blob/main/LICENSE">
+    <img alt="LICENSE" src="https://img.shields.io/github/license/tf-libsonnet/libgenerator?style=for-the-badge">
+  </a>
+  <a href="https://github.com/tf-libsonnet/libgenerator/actions/workflows/lint-test-and-generate.yml?query=branch%3Amain">
+    <img alt="main branch CI" src="https://img.shields.io/github/actions/workflow/status/tf-libsonnet/libgenerator/lint-test-and-generate.yml?branch=main&logo=github&label=CI&style=for-the-badge">
+  </a>
+  <a href="https://github.com/tf-libsonnet/libgenerator/releases/latest">
+    <img alt="latest release" src="https://img.shields.io/github/v/release/tf-libsonnet/libgenerator?style=for-the-badge">
+  </a>
+</p>
 
 `tf-libsonnet/libgenerator` is a code generator for Jsonnet Terraform libraries.
 
