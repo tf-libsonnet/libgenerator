@@ -20,6 +20,8 @@ the provider binaries (from the `terraform providers schema` command).
 The list of supported providers as well as the destination repositories can be found in the
 [cfg/managed.json](./cfg/managed.json) config file.
 
+Learn more about `tf.libsonnet` [here](https://docs.tflibsonnet.com/).
+
 ## Usage
 
 ### Running the standalone binary
