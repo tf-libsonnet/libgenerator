@@ -56,6 +56,14 @@
     }
   },
   {
+    "repo": "hashicorp-vault",
+    "subdir": "3.x",
+    "provider": {
+      "src": "hashicorp/vault",
+      "version": "=3.11.0"
+    }
+  },
+  {
     "repo": "dopplerhq-doppler",
     "subdir": "1.x",
     "provider": {
