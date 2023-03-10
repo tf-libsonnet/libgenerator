@@ -28,7 +28,7 @@
     "subdir": "4.x",
     "provider": {
       "src": "hashicorp/aws",
-      "version": "=4.57.1"
+      "version": "=4.58.0"
     }
   },
   {
