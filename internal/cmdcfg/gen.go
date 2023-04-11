@@ -101,7 +101,12 @@ This command will:
 
 				logger.Infof("Rendering %s library to %s", k, libRoot)
 				providerSchema := schema.Schemas[k]
-				renderErr := gen.RenderLibrary(logger, libRoot, pName, providerSchema)
+				opts := gen.RenderLibraryOpts{
+					ProviderName:   pName,
+					Schema:         providerSchema,
+					ResourcePrefix: entry.ResourcePrefix,
+				}
+				renderErr := gen.RenderLibrary(logger, libRoot, opts)
 				if renderErr != nil {
 					return renderErr
 				}
@@ -118,9 +123,10 @@ type genConfig struct {
 }
 
 type configEntry struct {
-	Repo     string          `json:"repo"`
-	Subdir   string          `json:"subdir"`
-	Provider *providerConfig `json:"provider"`
+	Repo           string          `json:"repo"`
+	Subdir         string          `json:"subdir"`
+	Provider       *providerConfig `json:"provider"`
+	ResourcePrefix string          `json:"resource_prefix,omitempty"`
 }
 
 type providerConfig struct {

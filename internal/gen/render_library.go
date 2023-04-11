@@ -8,6 +8,12 @@ import (
 	"go.uber.org/zap"
 )
 
+type RenderLibraryOpts struct {
+	ProviderName   string
+	ResourcePrefix string
+	Schema         *tfjson.ProviderSchema
+}
+
 // RenderLibrary renders a full provider schema as a libsonnet library. The libsonnet library has the following
 // folderstructure:
 //
@@ -21,41 +27,45 @@ import (
 func RenderLibrary(
 	logger *zap.SugaredLogger,
 	outDir string,
-	providerName string,
-	schema *tfjson.ProviderSchema,
+	opts RenderLibraryOpts,
 ) error {
 	libraryFPath := filepath.Join(outDir, libRootDirName)
 	resourcesFPath := filepath.Join(libraryFPath, libResourcesDirName)
 	dataSourcesFPath := filepath.Join(libraryFPath, libDataSourcesDirName)
 	idx := indexImports{
-		providerName: providerName,
+		providerName: opts.ProviderName,
+	}
+
+	resrcPrefix := opts.ProviderName
+	if opts.ResourcePrefix != "" {
+		resrcPrefix = opts.ResourcePrefix
 	}
 
 	logger.Info("Rendering provider config generator")
-	doc, err := renderProvider(providerName, schema.ConfigSchema.Block)
+	doc, err := renderProvider(opts.ProviderName, opts.Schema.ConfigSchema.Block)
 	if err != nil {
 		return err
 	}
 
 	providerFPath := filepath.Join(
 		libraryFPath,
-		providerNameToLibsonnetName(providerName),
+		providerNameToLibsonnetName(opts.ProviderName),
 	)
 	if err := writeDocToFile(logger, doc, providerFPath); err != nil {
 		return err
 	}
 
 	// Render the resource libsonnet files
-	for resrcName, resrcSchema := range schema.ResourceSchemas {
+	for resrcName, resrcSchema := range opts.Schema.ResourceSchemas {
 		logger.Infof("Rendering %s", resrcName)
 
 		idx.resources = append(
 			idx.resources,
-			nameWithoutProvider(providerName, resrcName),
+			nameWithoutProvider(resrcPrefix, resrcName),
 		)
 
 		doc, err := renderResourceOrDataSource(
-			providerName, resrcName, IsResource, resrcSchema.Block,
+			opts.ProviderName, resrcName, IsResource, resrcSchema.Block,
 		)
 		if err != nil {
 			return err
@@ -63,7 +73,7 @@ func RenderLibrary(
 
 		resrcFPath := filepath.Join(
 			resourcesFPath,
-			nameToLibsonnetName(providerName, resrcName),
+			nameToLibsonnetName(resrcPrefix, resrcName),
 		)
 		if err := writeDocToFile(logger, doc, resrcFPath); err != nil {
 			return err
@@ -71,16 +81,16 @@ func RenderLibrary(
 	}
 
 	// Render the data source libsonnet files
-	for datasrcName, datasrcSchema := range schema.DataSourceSchemas {
+	for datasrcName, datasrcSchema := range opts.Schema.DataSourceSchemas {
 		logger.Infof("Rendering %s", datasrcName)
 
 		idx.dataSources = append(
 			idx.dataSources,
-			nameWithoutProvider(providerName, datasrcName),
+			nameWithoutProvider(resrcPrefix, datasrcName),
 		)
 
 		doc, err := renderResourceOrDataSource(
-			providerName, datasrcName, IsDataSource, datasrcSchema.Block,
+			opts.ProviderName, datasrcName, IsDataSource, datasrcSchema.Block,
 		)
 		if err != nil {
 			return err
@@ -88,7 +98,7 @@ func RenderLibrary(
 
 		datasrcFPath := filepath.Join(
 			dataSourcesFPath,
-			nameToLibsonnetName(providerName, datasrcName),
+			nameToLibsonnetName(resrcPrefix, datasrcName),
 		)
 		if err := writeDocToFile(logger, doc, datasrcFPath); err != nil {
 			return err
