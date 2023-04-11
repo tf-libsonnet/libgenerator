@@ -45,7 +45,8 @@
     "provider": {
       "src": "hashicorp/google-beta",
       "version": "=4.61.0"
-    }
+    },
+    "resource_prefix": "google"
   },
   {
     "repo": "hashicorp-hcp",

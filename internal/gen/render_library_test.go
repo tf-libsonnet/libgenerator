@@ -35,7 +35,11 @@ func TestRenderLibrary(t *testing.T) {
 
 	libDir := filepath.Join(tmpWorkDir, "tfcoremock")
 	schema := loadSchema(g, tfcoremockSchemaF)
-	g.Expect(RenderLibrary(logger, libDir, "tfcoremock", schema)).To(Succeed())
+	opts := RenderLibraryOpts{
+		ProviderName: "tfcoremock",
+		Schema:       schema,
+	}
+	g.Expect(RenderLibrary(logger, libDir, opts)).To(Succeed())
 
 	testCases, err := os.ReadDir(renderLibraryTestCasesDir)
 	g.Expect(err).NotTo(HaveOccurred())
