@@ -20,7 +20,7 @@
     "subdir": "2.x",
     "provider": {
       "src": "hashicorp/azuread",
-      "version": "=2.38.0"
+      "version": "=2.39.0"
     }
   },
   {
