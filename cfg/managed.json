@@ -44,7 +44,7 @@
     "subdir": "4.x",
     "provider": {
       "src": "hashicorp/google-beta",
-      "version": "=4.63.1"
+      "version": "=4.65.0"
     },
     "resource_prefix": "google"
   },
