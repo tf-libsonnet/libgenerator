@@ -25,10 +25,10 @@
   },
   {
     "repo": "hashicorp-aws",
-    "subdir": "4.x",
+    "subdir": "5.x",
     "provider": {
       "src": "hashicorp/aws",
-      "version": "=4.67.0"
+      "version": "=5.1.0"
     }
   },
   {
