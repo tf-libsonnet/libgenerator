@@ -17,7 +17,7 @@ jobs:
         with:
           go-version: 1.19
 
-      - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@639cd343e1d3b897ff35927a75193d57cfcba299 # v3.6.0
@@ -28,7 +28,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
 
       - uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1 # v2.0.3
         with:
@@ -58,7 +58,7 @@ jobs:
     outputs:
       entries: ${{ steps.load-managed-cfg.outputs.entries }}
     steps:
-      - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.1.0
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
 
       - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v3.3.1
         with:
@@ -121,7 +121,7 @@ jobs:
             -o "$(pwd)/generator-out/${{ matrix.entry.repo }}/docs/${{ matrix.entry.subdir }}" \
             "$(pwd)/generator-out/${{ matrix.entry.repo }}/${{ matrix.entry.subdir }}/main.libsonnet"
 
-      - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.1.0
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
         with:
           token: ${{ secrets.TFLIBSONNET_CI_GITHUB_TOKEN }}
           repository: tf-libsonnet/${{ matrix.entry.repo }}
