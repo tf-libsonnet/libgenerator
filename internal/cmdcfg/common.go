@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/tf-libsonnet/libgenerator/internal/tfschema"
+	"github.com/tf-libsonnet/libgenerator/tfschema"
 )
 
 const (

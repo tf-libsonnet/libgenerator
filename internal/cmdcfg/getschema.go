@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/tf-libsonnet/libgenerator/internal/logging"
-	"github.com/tf-libsonnet/libgenerator/internal/tfschema"
+	"github.com/tf-libsonnet/libgenerator/tfschema"
 )
 
 func init() {
