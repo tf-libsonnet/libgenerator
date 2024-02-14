@@ -61,7 +61,7 @@
     "subdir": "3.x",
     "provider": {
       "src": "hashicorp/vault",
-      "version": "=3.22.0"
+      "version": "=3.25.0"
     }
   },
   {
