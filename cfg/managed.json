@@ -69,7 +69,7 @@
     "subdir": "1.x",
     "provider": {
       "src": "DopplerHQ/doppler",
-      "version": "=1.3.0"
+      "version": "=1.11.0"
     }
   }
 ]
